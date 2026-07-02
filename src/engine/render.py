@@ -1,14 +1,22 @@
 """Pipeline di rendering: partitura YAML → buffer stereo → file audio.
 
-Walking skeleton (M1): caso deterministico — selezione sequenziale,
-durata frammento fissa, fill_factor, nessuna componente stocastica.
+Dal M5 il layer è cablato sul sistema dichiarativo: parametri con
+tendency mask (D5), durate da Strategy (D8), onset da fill_factor +
+distribution con stop senza mozzatura (D2, D3, D7), seeding namespaced
+con seed di sessione da timestamp sempre loggato (D14).
 """
 
+import time as _time
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
 import yaml
+
+from src.core.fragment_sequence import build_fragment_sequence
+from src.parameters.parser import create_layer_parameters
+from src.shared.seeding import rng_for
+from src.strategies.duration_strategy import build_duration_strategy
 
 DEFAULT_SAMPLE_RATE = 48000
 
@@ -19,9 +27,10 @@ def render_score(score_path: Path, output_path: Path) -> None:
     """Renderizza la partitura e scrive il file di output (WAV float32)."""
     data = yaml.safe_load(Path(score_path).read_text(encoding="utf-8"))
     sample_rate = int(data.get("sample_rate", DEFAULT_SAMPLE_RATE))
+    seed = _resolve_seed(data)
 
     layer_buffers = [
-        _render_layer(layer, sample_rate) for layer in data["layers"]
+        _render_layer(layer, sample_rate, seed) for layer in data["layers"]
     ]
 
     total_frames = max(len(buf) for buf in layer_buffers)
@@ -33,37 +42,56 @@ def render_score(score_path: Path, output_path: Path) -> None:
              subtype="FLOAT")
 
 
-def _render_layer(layer: dict, sample_rate: int) -> np.ndarray:
-    """Renderizza un layer: dispone i frammenti sulla timeline stereo."""
+def _resolve_seed(data: dict):
+    """Seed dalla partitura; assente → da timestamp, SEMPRE loggato (D14)."""
+    if "seed" in data and data["seed"] is not None:
+        return data["seed"]
+    seed = _time.time_ns()
+    # Solo ASCII nell'output CLI: le console Windows in pipe si strozzano
+    # su caratteri non-ASCII (stessa lezione dei messaggi d'errore).
+    print(f"seed di sessione (generato): {seed} "
+          f"-- aggiungi 'seed: {seed}' alla partitura per riprodurre")
+    return seed
+
+
+def _render_layer(layer: dict, sample_rate: int, seed) -> np.ndarray:
+    """Renderizza un layer: sequenza di frammenti → timeline stereo."""
+    layer_id = layer.get("layer_id", "layer")
     target_duration = float(layer["duration"])
-    fragment_duration = float(layer["fragment"]["duration"])
-    fill_factor = float(layer.get("fill_factor", 1.0))
+    time_mode = layer.get("time_mode", "absolute")
+
+    params = create_layer_parameters(
+        layer, layer_id=layer_id, duration=target_duration, seed=seed,
+        time_mode=time_mode,
+    )
+    duration_strategy = build_duration_strategy(
+        layer.get("fragment", {}), layer_id=layer_id,
+        duration=target_duration, seed=seed, time_mode=time_mode,
+    )
+    fragments = build_fragment_sequence(
+        duration_strategy=duration_strategy,
+        fill_factor=params["fill_factor"],
+        distribution=params["distribution"],
+        target_duration=target_duration,
+        rng=rng_for(seed, layer_id, "onset"),
+    )
 
     pool_files = _scan_pool(Path(layer["pool"]))
 
-    # Onset da fill_factor (D2): IOI = durata_frammento / F.
-    # Stop (D7): ci si ferma quando il prossimo onset supererebbe la
-    # durata-obiettivo; l'ultimo frammento suona per intero.
-    onsets = []
-    t = 0.0
-    while t < target_duration:
-        onsets.append(t)
-        t += fragment_duration / fill_factor
+    extent = max(f.onset + f.duration for f in fragments)
+    buffer = np.zeros((round(extent * sample_rate), 2), dtype=np.float64)
 
-    fragment_frames = round(fragment_duration * sample_rate)
-    total_frames = round(onsets[-1] * sample_rate) + fragment_frames
-    buffer = np.zeros((total_frames, 2), dtype=np.float64)
-
-    for index, onset in enumerate(onsets):
+    for index, frag in enumerate(fragments):
         # Selezione sequenziale (D6): i file del pool in ordine, ciclando.
         source = _load_mono(pool_files[index % len(pool_files)], sample_rate)
-        segment = source[:fragment_frames]
+        segment = source[: round(frag.duration * sample_rate)]
 
         # Pan mid/side a 0° (D12): centro → L = R = s/√2.
-        start = round(onset * sample_rate)
-        left = right = segment / np.sqrt(2.0)
-        buffer[start:start + len(segment), 0] += left
-        buffer[start:start + len(segment), 1] += right
+        start = round(frag.onset * sample_rate)
+        end = min(start + len(segment), len(buffer))
+        panned = segment[: end - start] / np.sqrt(2.0)
+        buffer[start:end, 0] += panned
+        buffer[start:end, 1] += panned
 
     return buffer
 
