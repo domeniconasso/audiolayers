@@ -1,0 +1,39 @@
+# Completion dinamica per `make` nel repo audiolayers.
+# Caricata dal precmd installato da setup.sh quando AUDIOLAYERS_ROOT è settato.
+
+_make_audiolayers() {
+  local cur=${words[-1]}
+
+  # SCORE=<TAB> → partiture YAML del repo
+  if [[ $cur == SCORE=* ]]; then
+    local -a yamls
+    yamls=(**/*.(yaml|yml)(N))
+    (( ${#yamls} )) && compadd -P 'SCORE=' -- $yamls
+    return
+  fi
+
+  # Se c'è già un target nella riga (parola senza '='), proponi le variabili ?=
+  local w has_target=0
+  for w in ${words[2,-2]}; do
+    [[ $w != *=* ]] && has_target=1 && break
+  done
+
+  if (( has_target )); then
+    local -a vars
+    vars=(${(f)"$(grep -h '^[A-Za-z_][A-Za-z0-9_]*[[:space:]]*?=' Makefile 2>/dev/null \
+      | sed 's/[[:space:]]*?=.*//' \
+      | sed 's/^[[:space:]]*//' \
+      | sort -u)"})
+    compadd -S '=' -- $vars
+    return
+  fi
+
+  # Nessun target ancora: proponi i target .PHONY
+  # Non delega a _make per evitare che zsh aggiunga i file della working directory.
+  local -a targets
+  targets=(${(f)"$(grep -h '^\.PHONY:' Makefile 2>/dev/null \
+    | sed 's/^\.PHONY:[[:space:]]*//' \
+    | tr ' ' '\n' \
+    | sort -u)"})
+  compadd -- $targets
+}
