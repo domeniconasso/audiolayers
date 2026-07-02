@@ -1,0 +1,7 @@
+# Gli script eseguiti in WSL/zsh devono restare LF anche su checkout Windows
+# (con core.autocrlf=true, CRLF romperebbe zsh/direnv).
+setup.sh          text eol=lf
+.envrc            text eol=lf
+.zsh_completions/* text eol=lf
+Makefile          text eol=lf
+*.py              text eol=lf

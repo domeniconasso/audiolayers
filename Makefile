@@ -7,7 +7,10 @@ else
     PYTHON := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 endif
 
-.PHONY: tests test unit integration golden e2e install render
+# Partitura da renderizzare: make render SCORE=path/to/score.yaml
+SCORE ?=
+
+.PHONY: tests test unit integration golden e2e install render setup
 
 tests: ## Suite completa
 	$(PYTHON) -m pytest
@@ -31,3 +34,6 @@ install: ## Installa/aggiorna dipendenze nel venv
 
 render: ## Renderizza una partitura: make render SCORE=path/to/score.yaml
 	$(PYTHON) -m src.main $(SCORE)
+
+setup: ## Configura direnv + tab-completion zsh (da WSL/zsh)
+	@zsh setup.sh
