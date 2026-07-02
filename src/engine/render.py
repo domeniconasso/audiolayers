@@ -17,6 +17,7 @@ from src.core.fragment_sequence import build_fragment_sequence
 from src.parameters.parser import create_layer_parameters
 from src.shared.seeding import rng_for
 from src.strategies.duration_strategy import build_duration_strategy
+from src.strategies.selection_strategy import build_selection_strategy
 
 DEFAULT_SAMPLE_RATE = 48000
 
@@ -77,13 +78,19 @@ def _render_layer(layer: dict, sample_rate: int, seed) -> np.ndarray:
     )
 
     pool_files = _scan_pool(Path(layer["pool"]))
+    # Precarica il pool una volta sola (mono, al SR di progetto).
+    sources = [_load_mono(p, sample_rate) for p in pool_files]
+    selection = build_selection_strategy(
+        layer.get("selection", {}), pool_size=len(sources),
+        layer_id=layer_id, seed=seed,
+    )
 
     extent = max(f.onset + f.duration for f in fragments)
     buffer = np.zeros((round(extent * sample_rate), 2), dtype=np.float64)
 
     for index, frag in enumerate(fragments):
-        # Selezione sequenziale (D6): i file del pool in ordine, ciclando.
-        source = _load_mono(pool_files[index % len(pool_files)], sample_rate)
+        # Quale file suona questo frammento lo decide la Strategy (D6).
+        source = sources[selection.select(index)]
         segment = source[: round(frag.duration * sample_rate)]
 
         # Pan mid/side a 0° (D12): centro → L = R = s/√2.
