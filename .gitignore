@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Ambienti virtuali
+.venv/
+venv/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Output di rendering (non versionare gli artefatti audio generati)
+output/
+*.seed.txt
+
+# Golden reference: SOLO tests/golden/references/ è versionato
+tests/golden/tmp/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
