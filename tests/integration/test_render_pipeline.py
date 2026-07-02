@@ -65,6 +65,33 @@ layers:
     assert np.array_equal(a, b)          # bit-identici (D14)
 
 
+def test_pointer_start_legge_dal_punto_dichiarato(tmp_path):
+    """Sorgente bifronte (440 Hz poi 880 Hz): pointer.start 0.5 →
+    tutti i frammenti leggono dalla seconda metà (D9)."""
+    pool_dir = tmp_path / "pool2"
+    pool_dir.mkdir()
+    t = np.arange(SR) / SR
+    two_face = np.concatenate([
+        0.5 * np.sin(2 * np.pi * 440 * t[: SR // 2]),
+        0.5 * np.sin(2 * np.pi * 880 * t[: SR // 2]),
+    ])
+    sf.write(pool_dir / "two.wav", two_face.astype(np.float32), SR)
+
+    audio = render(tmp_path, f"""\
+layers:
+  - layer_id: "meta"
+    duration: 1.0
+    pool: "{pool_dir.as_posix()}"
+    fragment: {{duration: 0.25}}
+    pointer: {{start: 0.5}}
+""")
+    for i in range(4):
+        seg = audio[i * SR // 4:(i + 1) * SR // 4, 0]
+        spec = np.abs(np.fft.rfft(seg))
+        freq = np.fft.rfftfreq(len(seg), 1 / SR)[spec.argmax()]
+        assert freq == pytest.approx(880.0, abs=4.0)
+
+
 def test_seed_diverso_produce_render_diverso(tmp_path, pool):
     def score(seed):
         return f"""\
