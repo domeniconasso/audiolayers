@@ -1,0 +1,28 @@
+# Stream singolo: frammenti back-to-back, senza silenzi né sovrapposizioni,
+# con durata che cresce linearmente da 1 ms a 1 s lungo i 60 secondi.
+#
+#   render puro (pool già popolato):
+#     python -m src.main scores/stream-crescente.yaml -o out/stream.wav
+#   con provisioning automatico da Internet Archive:
+#     python -m src.main scores/stream-crescente.yaml -o out/stream.wav --dig
+sample_rate: 48000
+seed: 20260703
+
+layers:
+  - layer_id: "stream"
+    duration: 60.0
+    pool: "audio/pool/"
+    fill_factor: 1.0          # back-to-back: IOI = durata frammento
+    distribution: 0.0         # metronomo: nessun jitter, nessuna sovrapposizione
+    fragment:
+      duration: [[0, 0.001], [60, 1.0]]   # 1 ms -> 1 s, lineare
+    selection:
+      strategy: sequential
+    # Blocco opzionale: usato solo con --dig. Senza flag il pool resta
+    # una normale cartella locale. Campi omessi -> default di provisioning.
+    provision:
+      search:
+        license: cc
+      files:
+        prefer:
+          - [Flac, WAVE, AIFF]   # il loader non legge mp3: solo lossless
