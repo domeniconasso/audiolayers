@@ -11,8 +11,9 @@ body.dark {
 body {
   font: 13px/1.4 "Times New Roman", Times, serif;
   background: var(--bg); color: var(--fg);
-  max-width: 940px; margin: 0 auto; padding: 6px 12px 96px;
 }
+/* colonna centrale: resta centrata nello spazio tra i pannelli */
+#centercol { max-width: 940px; margin: 0 auto; padding: 6px 12px 96px; }
 h1 { font-size: 19px; font-weight: bold; letter-spacing: .02em; }
 h2 { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
 h2::before { content: "» "; color: var(--mut); }
@@ -84,8 +85,8 @@ canvas.envelope { width: 100%; height: 52px; border: 1px solid var(--line);
 .envrow { grid-column: 1 / -1; }
 
 #infobox {
-  position: fixed; top: 84px; right: 10px;
-  width: calc((100vw - 940px) / 2 - 24px);
+  position: fixed; top: 84px; right: calc(var(--daw-w, 0px) + 10px);
+  width: calc((100vw - var(--env-w, 0px) - var(--daw-w, 0px) - 940px) / 2 - 24px);
   min-width: 165px; max-width: 270px;
   border: 1px solid var(--fg); padding: 5px 8px;
   font-size: 12px; background: var(--tip);
@@ -97,8 +98,8 @@ canvas.envelope { width: 100%; height: 52px; border: 1px solid var(--line);
              width: auto; max-width: none; }
 }
 
-/* tre finestre: inviluppi | principale | daw */
-body { margin-right: var(--daw-w, 0); margin-left: var(--env-w, 0); }
+/* tre finestre: inviluppi | principale | daw — il centro resta centrato */
+body { padding-right: var(--daw-w, 0); padding-left: var(--env-w, 0); }
 
 #envpanel { position: fixed; top: 0; left: 0; bottom: 40px; z-index: 5;
             background: var(--bg); border-right: 1px solid var(--fg);
