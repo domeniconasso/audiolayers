@@ -411,9 +411,34 @@ function renderEnvPanel() {
     title.className = "lane-name";
     title.textContent = lane.name;
     title.onclick = () => showInfo(lane.def);
+
+    // Range di lavoro dell'asse Y, scelto dall'utente (default: bounds
+    // del parametro). Vive sul controllo, così sopravvive ai re-render.
+    const c = lane.control;
+    if (c.viewMin === undefined) c.viewMin = lane.def.min;
+    if (c.viewMax === undefined) c.viewMax = lane.def.max;
+    const viewDef = { ...lane.def, min: c.viewMin, max: c.viewMax };
+
     const range = document.createElement("span");
     range.className = "lane-range";
-    range.textContent = `${lane.def.min} … ${lane.def.max}`;
+    const mkBound = (key, title_) => {
+      const inp = document.createElement("input");
+      inp.type = "number"; inp.value = c[key]; inp.title = title_;
+      inp.step = lane.def.step ?? 1;
+      inp.onchange = () => {
+        const v = parseFloat(inp.value);
+        if (!isNaN(v)) c[key] = v;
+        if (c.viewMin >= c.viewMax) c.viewMax = c.viewMin + (lane.def.step ?? 1);
+        renderEnvPanel();
+      };
+      return inp;
+    };
+    const lo = mkBound("viewMin", "minimo dell'asse");
+    const hi = mkBound("viewMax", "massimo dell'asse");
+    const sep = document.createElement("span");
+    sep.textContent = "…";
+    range.append(lo, sep, hi);
+
     const fisso = document.createElement("button");
     fisso.className = "envbtn"; fisso.textContent = "fisso";
     fisso.title = "torna a valore fisso (primo punto)";
@@ -422,7 +447,7 @@ function renderEnvPanel() {
     const cv = document.createElement("canvas");
     cv.className = "envelope";
     box.append(head, cv);
-    attachEnvelopeEditor(cv, lane.def, lane.control, lane.getDur,
+    attachEnvelopeEditor(cv, viewDef, lane.control, lane.getDur,
                          () => { renderGlobals(); renderLayers(); });
   }
   if (!lanes.length) {
