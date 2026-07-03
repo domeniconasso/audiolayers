@@ -100,6 +100,7 @@ canvas.envelope { width: 100%; height: 52px; border: 1px solid var(--line);
 
 /* tre finestre: inviluppi | principale | daw — il centro resta centrato */
 body { padding-right: var(--daw-w, 0); padding-left: var(--env-w, 0); }
+#envpanel[hidden], #daw[hidden] { display: none; }
 
 #envpanel { position: fixed; top: 0; left: 0; bottom: 40px; z-index: 5;
             background: var(--bg); border-right: 1px solid var(--fg);
