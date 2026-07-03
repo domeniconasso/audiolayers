@@ -60,6 +60,50 @@ class TestArchiveDiggerSource:
         ArchiveDiggerSource(client=client).ensure(layer, seed=1)
         assert count_suitable_files(pool, min_duration=0.5) == 4
 
+    def test_pool_gia_pieno_non_tocca_internet_archive(self, tmp_path):
+        """Idempotenza (D-P5): file idonei già sufficienti → zero ricerche."""
+        pool = tmp_path / "pool"
+        pool.mkdir()
+        for i in range(4):
+            write_wav(pool / f"gia_{i}.wav", 2.0)
+        layer = dict(DET_LAYER, pool=str(pool))
+        client = FakeArchiveClient()
+        ArchiveDiggerSource(client=client).ensure(layer, seed=1)
+        assert client.queries == []
+
+    def test_pool_parziale_chiede_solo_la_differenza(self, tmp_path):
+        """3 file idonei su 4 → alla ricerca si chiede 1 solo item."""
+        pool = tmp_path / "pool"
+        pool.mkdir()
+        for i in range(3):
+            write_wav(pool / f"gia_{i}.wav", 2.0)
+        layer = dict(DET_LAYER, pool=str(pool))
+        client = FakeArchiveClient()
+        ArchiveDiggerSource(client=client).ensure(layer, seed=1)
+        assert client.max_items_seen[0] == 1
+        assert count_suitable_files(pool, min_duration=0.5) == 4
+
+    def test_blocco_provision_finisce_nella_query(self, tmp_path):
+        """La partitura orienta la ricerca; senza blocco valgono i default
+        (license cc). La collection dichiarata deve comparire nella query."""
+        layer = dict(DET_LAYER, pool=str(tmp_path / "pool"),
+                     provision={"search": {"collection": ["field-recordings"]}})
+        client = FakeArchiveClient()
+        ArchiveDiggerSource(client=client).ensure(layer, seed=1)
+        assert "field-recordings" in client.queries[0]
+        assert "license" in client.queries[0].lower()
+
+    def test_archivio_insufficiente_avvisa_e_non_cicla_per_sempre(
+            self, tmp_path, capsys):
+        """Solo 2 item disponibili per 4 frammenti → warning esplicito,
+        il metodo termina e il pool tiene quello che c'è."""
+        pool = tmp_path / "pool"
+        layer = dict(DET_LAYER, pool=str(pool))
+        client = FakeArchiveClient(n_items=2)
+        ArchiveDiggerSource(client=client).ensure(layer, seed=1)
+        assert count_suitable_files(pool, min_duration=0.5) == 2
+        assert "ATTENZIONE" in capsys.readouterr().out
+
 
 class TestCountSuitableFiles:
     def test_conta_solo_i_file_abbastanza_lunghi(self, tmp_path):
