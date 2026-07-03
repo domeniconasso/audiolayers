@@ -10,6 +10,8 @@ Organizzata secondo [Diátaxis](https://diataxis.fr/) (come PythonGranularEngine
 
 ## Punto di partenza
 
+- [manuale.md](manuale.md) — **IL MANUALE**: cos'è lo strumento, flusso di
+  lavoro, concetti, "Come scrivere uno YAML" passo passo, errori, mappa del repo
 - [reference/yaml.md](reference/yaml.md) — **il formato di partitura**: parametri,
   tendency masks, envelope, bounds, seeding
 - [reference/cli.md](reference/cli.md) — riga di comando, formati, report picco

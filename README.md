@@ -39,7 +39,9 @@ layers:
 python -m src.main brano.yaml -o brano.wav
 ```
 
-Reference completa: [docs/reference/yaml.md](docs/reference/yaml.md) ·
+**Manuale completo**: [docs/manuale.md](docs/manuale.md) — con la guida
+passo-passo "Come scrivere uno YAML". Reference:
+[docs/reference/yaml.md](docs/reference/yaml.md) ·
 [docs/reference/cli.md](docs/reference/cli.md)
 
 ## Stato
