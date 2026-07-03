@@ -23,6 +23,9 @@ layers:
     provision:
       search:
         license: cc
+        # Item-level: solo item che contengono file lossless, altrimenti
+        # i top-download CC sono quasi tutti mp3 e la resa crolla.
+        query: 'format:("WAVE" OR "Flac")'
       files:
         prefer:
           - [Flac, WAVE, AIFF]   # il loader non legge mp3: solo lossless
