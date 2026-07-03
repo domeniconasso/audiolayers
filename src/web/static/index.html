@@ -13,10 +13,13 @@
     <button id="btn-add-layer">+ layer</button>
     <button id="btn-export">esporta yaml</button>
     <label class="filebtn">importa yaml<input type="file" id="file-import" accept=".yaml,.yml"></label>
-    <label class="toggle"><input type="checkbox" id="chk-dig"> download (dig)</label>
     <button id="btn-render" class="primary">render</button>
+    <button id="btn-theme" title="chiaro/scuro">☀</button>
   </div>
 </header>
+<div id="subbar">
+  <label class="toggle"><input type="checkbox" id="chk-dig"> download (dig) — popola il pool da Internet Archive prima del render</label>
+</div>
 
 <section id="globals" class="panel">
   <h2>globali</h2>
@@ -29,6 +32,11 @@
   <h3></h3>
   <p></p>
 </aside>
+
+<div id="terminal">
+  <div id="term-head">terminale <span id="term-arrow">▸</span></div>
+  <pre id="term-body" hidden></pre>
+</div>
 
 <footer id="status-bar">
   <span id="status">pronto</span>
