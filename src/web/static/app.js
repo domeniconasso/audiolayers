@@ -268,18 +268,12 @@ function paramRow(def, control, getDur) {
       } else {
         control.value = [[0, control.value], [getDur(), control.value]];
         control.enabled = true;
-        envPanelOpen();
       }
       rerender();
     };
     name.append(" ", envBtn);
-    if (isCurve) {
-      const link = document.createElement("span");
-      link.className = "curva-link";
-      link.textContent = "curva → inviluppi";
-      link.onclick = envPanelOpen;
-      slot.append(link);
-    } else showScalar();
+    if (isCurve) val.textContent = "curva";   // si edita nel pannello inviluppi
+    else showScalar();
   } else showScalar();
 
   return row;
