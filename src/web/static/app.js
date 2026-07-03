@@ -171,7 +171,7 @@ function paramRow(def, control, getDur) {
 
   const chk = document.createElement("input");
   chk.type = "checkbox"; chk.checked = control.enabled;
-  chk.onchange = () => { control.enabled = chk.checked; row.classList.toggle("off", !chk.checked); };
+  chk.onchange = () => { control.enabled = chk.checked; rerender(); };
 
   const name = document.createElement("span");
   name.className = "name"; name.textContent = def.label;
@@ -179,7 +179,15 @@ function paramRow(def, control, getDur) {
   name.onclick = () => showInfo(def);
 
   const slot = document.createElement("span");
+  slot.className = "ctl";
   const val = document.createElement("span"); val.className = "value";
+
+  // Spento: solo checkbox + nome, niente controlli che ingombrano.
+  if (!control.enabled) {
+    row.append(chk, name);
+    row.classList.add("bare");
+    return row;
+  }
 
   const showScalar = () => {
     slot.innerHTML = ""; val.textContent = "";
@@ -222,15 +230,25 @@ function paramRow(def, control, getDur) {
       };
       slot.append(txt);
     } else {
+      // Slider + campo numerico: stesso valore, scrivibile a mano.
       const rng = document.createElement("input");
       rng.type = "range"; rng.min = def.min; rng.max = def.max; rng.step = def.step;
       rng.value = Array.isArray(control.value) ? def.def : control.value;
-      val.textContent = rng.value;
-      rng.oninput = () => { control.value = parseFloat(rng.value); val.textContent = rng.value; };
+      const num = document.createElement("input");
+      num.type = "number"; num.step = def.step; num.value = rng.value;
+      rng.oninput = () => { control.value = parseFloat(rng.value); num.value = rng.value; };
+      num.onchange = () => {
+        const v = parseFloat(num.value);
+        if (isNaN(v)) { num.value = rng.value; return; }
+        control.value = v; rng.value = v;   // il campo può anche sforare lo slider
+      };
       slot.append(rng);
+      val.append(num);
     }
   };
 
+  if (["text", "list", "listlist", "numlist"].includes(def.kind))
+    row.classList.add("wide");   // il box di testo prende tutta la riga
   row.append(chk, name, slot, val);
 
   if (def.env) {
@@ -339,19 +357,24 @@ function renderLayers() {
       grid.append(paramRow(def, layer.params[def.path], getDur));
     }
     panel.append(grid);
-    const digTitle = document.createElement("h2");
-    digTitle.textContent = "digger";
-    digTitle.style.margin = "1rem 0 .6rem";
-    const digGrid = document.createElement("div");
-    digGrid.className = "params";
-    for (const def of PROVISION_DEFS) {
-      if (!layer.params[def.path]) layer.params[def.path] = newControl(def);
-      digGrid.append(paramRow(def, layer.params[def.path], getDur));
+    // Sezione digger: esiste solo se il toggle "download (dig)" è attivo.
+    if (document.getElementById("chk-dig").checked) {
+      const digTitle = document.createElement("h2");
+      digTitle.textContent = "digger";
+      digTitle.style.margin = "1rem 0 .6rem";
+      const digGrid = document.createElement("div");
+      digGrid.className = "params";
+      for (const def of PROVISION_DEFS) {
+        if (!layer.params[def.path]) layer.params[def.path] = newControl(def);
+        digGrid.append(paramRow(def, layer.params[def.path], getDur));
+      }
+      panel.append(digTitle, digGrid);
     }
-    panel.append(digTitle, digGrid);
     main.append(panel);
   });
 }
+
+function rerender() { renderGlobals(); renderLayers(); }
 
 /* ---------- pannello info ---------- */
 function showInfo(def) {
@@ -426,6 +449,7 @@ async function doImport(file) {
 document.getElementById("btn-add-layer").onclick = () => {
   state.layers.push(newLayer()); renderLayers();
 };
+document.getElementById("chk-dig").onchange = renderLayers;
 document.getElementById("btn-render").onclick = doRender;
 document.getElementById("btn-export").onclick = doExport;
 document.getElementById("file-import").onchange = (ev) => {
