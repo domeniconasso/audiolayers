@@ -449,11 +449,19 @@ function renderEnvPanel() {
     sep.textContent = "…";
     range.append(lo, sep, hi);
 
+    const reset = document.createElement("button");
+    reset.className = "envbtn"; reset.textContent = "reset";
+    reset.title = "curva piatta al default, asse ai bounds del parametro";
+    reset.onclick = () => {
+      c.viewMin = lane.def.min; c.viewMax = lane.def.max;
+      c.value = [[0, lane.def.def], [lane.getDur(), lane.def.def]];
+      rerender();
+    };
     const fisso = document.createElement("button");
     fisso.className = "envbtn"; fisso.textContent = "fisso";
     fisso.title = "torna a valore fisso (primo punto)";
     fisso.onclick = () => { lane.control.value = lane.control.value[0][1]; rerender(); };
-    head.append(title, range, fisso);
+    head.append(title, range, reset, fisso);
     const cv = document.createElement("canvas");
     cv.className = "envelope";
     box.append(head, cv);
