@@ -3,6 +3,7 @@ soundfile>=0.12
 soxr>=0.5
 PyYAML>=6.0
 scipy>=1.11
+flask>=3.0
 archivedigger @ git+https://github.com/MU-prj/archivedigger@main
 
 # dev
