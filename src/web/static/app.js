@@ -427,9 +427,19 @@ function renderEnvPanel() {
       inp.step = lane.def.step ?? 1;
       inp.onchange = () => {
         const v = parseFloat(inp.value);
-        if (!isNaN(v)) c[key] = v;
+        if (isNaN(v)) { inp.value = c[key]; return; }
+        // Non solo scala visiva: i punti della curva vengono RIMAPPATI
+        // nel nuovo intervallo (stesse posizioni, nuovi valori reali).
+        const oldMin = c.viewMin, oldMax = c.viewMax;
+        c[key] = v;
         if (c.viewMin >= c.viewMax) c.viewMax = c.viewMin + (lane.def.step ?? 1);
-        renderEnvPanel();
+        const span = oldMax - oldMin || 1;
+        c.value = c.value.map(([t, val]) => {
+          const frac = (val - oldMin) / span;
+          const nuovo = c.viewMin + frac * (c.viewMax - c.viewMin);
+          return [t, Number(nuovo.toFixed(4))];
+        });
+        rerender();
       };
       return inp;
     };
