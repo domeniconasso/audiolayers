@@ -85,6 +85,40 @@ class TestWebApi:
                                content_type="text/yaml").get_json()
         assert imported["layers"][0]["params"]["fragment.duration"]["value"] == 0.25
 
+    def test_terminale_espone_l_output_del_motore(self, tmp_path):
+        """Il render stampa picco/seed: le righe finiscono nel log della
+        GUI, leggibili a incrementi con ?since=."""
+        pool = tmp_path / "pool"
+        pool.mkdir()
+        write_wav(pool / "a.wav", 1.0)
+        app = create_app(output_dir=tmp_path / "out")
+        client = app.test_client()
+        job_id = client.post("/api/render",
+                             json={"state": make_state(pool)}).get_json()["job_id"]
+        wait_done(client, job_id)
+
+        log = client.get("/api/log").get_json()
+        text = "\n".join(line for _, line in log["lines"])
+        assert "picco" in text
+        # lettura incrementale: da next in poi non c'è nulla di nuovo
+        again = client.get(f"/api/log?since={log['next']}").get_json()
+        assert again["lines"] == []
+
+    def test_import_partitura_reale_posiziona_i_valori(self):
+        """Le partiture del repo devono rientrare nei controlli giusti:
+        envelope come liste, blocchi annidati sui percorsi dot."""
+        app = create_app(output_dir=None)
+        client = app.test_client()
+        text = open("scores/stream-crescente.yaml", encoding="utf-8").read()
+        state = client.post("/api/import", data=text,
+                            content_type="text/yaml").get_json()
+        assert state["global"]["seed"]["value"] == 20260703
+        params = state["layers"][0]["params"]
+        assert params["duration"]["value"] == 20.0
+        assert params["fragment.duration"]["value"] == [[0, 0.005], [20, 0.06]]
+        assert params["pointer.start_range"]["value"] == 0.5
+        assert params["provision.search.license"]["value"] == "cc"
+
     def test_root_serve_la_pagina(self, tmp_path):
         app = create_app(output_dir=tmp_path / "out")
         response = app.test_client().get("/")

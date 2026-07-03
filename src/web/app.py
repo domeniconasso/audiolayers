@@ -6,7 +6,11 @@ src.web` usa i default veri. Il render gira come job in background
 (JobManager) e la GUI fa polling.
 """
 
+import contextlib
+import io
 import tempfile
+import threading
+import time
 from pathlib import Path
 
 import yaml
@@ -18,6 +22,38 @@ from src.web.score_builder import build_score, parse_score
 STATIC_DIR = Path(__file__).parent / "static"
 
 
+class LogBuffer:
+    """Terminale della GUI: righe con timestamp, lettura incrementale."""
+
+    def __init__(self, max_lines: int = 500):
+        self._lines: list[tuple[str, str]] = []
+        self._max = max_lines
+        self._offset = 0          # indice assoluto della prima riga tenuta
+        self._lock = threading.Lock()
+
+    def write(self, text: str) -> None:
+        for line in text.splitlines():
+            if line.strip():
+                self.add(line.rstrip())
+
+    def flush(self) -> None:      # interfaccia file-like per redirect_stdout
+        pass
+
+    def add(self, line: str) -> None:
+        with self._lock:
+            self._lines.append((time.strftime("%H:%M:%S"), line))
+            overflow = len(self._lines) - self._max
+            if overflow > 0:
+                del self._lines[:overflow]
+                self._offset += overflow
+
+    def since(self, index: int) -> dict:
+        with self._lock:
+            start = max(0, index - self._offset)
+            return {"lines": self._lines[start:],
+                    "next": self._offset + len(self._lines)}
+
+
 def create_app(*, output_dir: Path | None = None,
                archive_client=None) -> Flask:
     app = Flask("audiolayers_gui", static_folder=str(STATIC_DIR),
@@ -25,6 +61,7 @@ def create_app(*, output_dir: Path | None = None,
     out = Path(output_dir) if output_dir else Path(tempfile.mkdtemp(prefix="audiolayers_gui_"))
     out.mkdir(parents=True, exist_ok=True)
     jobs = JobManager()
+    log = LogBuffer()
 
     @app.get("/")
     def index():
@@ -37,19 +74,33 @@ def create_app(*, output_dir: Path | None = None,
         dig = bool(payload.get("dig"))
 
         def runner():
-            score_path = out / "score.yaml"
-            score_path.write_text(
-                yaml.safe_dump(score, sort_keys=False, allow_unicode=True),
-                encoding="utf-8")
-            if dig:
-                from src.provisioning.pool_source import provision_score
-                provision_score(score_path, client=archive_client)
-            from src.engine.render import render_score
-            wav_path = out / "render.wav"
-            render_score(score_path, wav_path)
+            # Tutto ciò che il motore stampa (picco, seed, warning del
+            # dig) finisce nel terminale della GUI.
+            with contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
+                score_path = out / "score.yaml"
+                score_path.write_text(
+                    yaml.safe_dump(score, sort_keys=False, allow_unicode=True),
+                    encoding="utf-8")
+                log.add(f"partitura scritta: {len(score['layers'])} layer")
+                if dig:
+                    log.add("dig: analisi partitura e download da Internet Archive...")
+                    from src.provisioning.pool_source import provision_score
+                    provision_score(score_path, client=archive_client)
+                    log.add("dig: completato")
+                log.add("render: avviato")
+                from src.engine.render import render_score
+                wav_path = out / "render.wav"
+                render_score(score_path, wav_path)
+                log.add(f"render: completato -> {wav_path.name}")
             return wav_path
 
-        return jsonify({"job_id": jobs.submit(runner)})
+        job_id = jobs.submit(runner)
+        log.add(f"job {job_id}: accodato" + (" (con dig)" if dig else ""))
+        return jsonify({"job_id": job_id})
+
+    @app.get("/api/log")
+    def read_log():
+        return jsonify(log.since(request.args.get("since", 0, type=int)))
 
     @app.get("/api/jobs/<job_id>")
     def job_status(job_id):
