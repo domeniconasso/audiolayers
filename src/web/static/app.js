@@ -450,6 +450,38 @@ document.getElementById("btn-add-layer").onclick = () => {
   state.layers.push(newLayer()); renderLayers();
 };
 document.getElementById("chk-dig").onchange = renderLayers;
+
+/* ---------- tema chiaro/scuro ---------- */
+const themeBtn = document.getElementById("btn-theme");
+function setTheme(dark) {
+  document.body.classList.toggle("dark", dark);
+  themeBtn.textContent = dark ? "☾" : "☀";
+  localStorage.setItem("theme", dark ? "dark" : "light");
+}
+themeBtn.onclick = () => setTheme(!document.body.classList.contains("dark"));
+setTheme(localStorage.getItem("theme") === "dark");
+
+/* ---------- terminale a tendina ---------- */
+const termBody = document.getElementById("term-body");
+let termNext = 0;
+document.getElementById("term-head").onclick = () => {
+  const open = termBody.hidden;
+  termBody.hidden = !open;
+  document.getElementById("term-arrow").textContent = open ? "▾" : "▸";
+  if (open) termBody.scrollTop = termBody.scrollHeight;
+};
+setInterval(async () => {
+  try {
+    const data = await (await fetch(`/api/log?since=${termNext}`)).json();
+    if (!data.lines.length) return;
+    termNext = data.next;
+    const atBottom = termBody.scrollHeight - termBody.scrollTop
+                     - termBody.clientHeight < 30;
+    for (const [ts, line] of data.lines)
+      termBody.textContent += `[${ts}] ${line}\n`;
+    if (atBottom || termBody.hidden) termBody.scrollTop = termBody.scrollHeight;
+  } catch { /* server assente: riprova al giro dopo */ }
+}, 1000);
 document.getElementById("btn-render").onclick = doRender;
 document.getElementById("btn-export").onclick = doExport;
 document.getElementById("file-import").onchange = (ev) => {

@@ -54,6 +54,15 @@ class LogBuffer:
                     "next": self._offset + len(self._lines)}
 
 
+@contextlib.contextmanager
+def _log_errors(log: LogBuffer):
+    try:
+        yield
+    except Exception as exc:
+        log.add(f"ERRORE: {exc}")
+        raise
+
+
 def create_app(*, output_dir: Path | None = None,
                archive_client=None) -> Flask:
     app = Flask("audiolayers_gui", static_folder=str(STATIC_DIR),
@@ -76,7 +85,8 @@ def create_app(*, output_dir: Path | None = None,
         def runner():
             # Tutto ciò che il motore stampa (picco, seed, warning del
             # dig) finisce nel terminale della GUI.
-            with contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
+            with contextlib.redirect_stdout(log), contextlib.redirect_stderr(log), \
+                 _log_errors(log):
                 score_path = out / "score.yaml"
                 score_path.write_text(
                     yaml.safe_dump(score, sort_keys=False, allow_unicode=True),
