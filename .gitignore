@@ -30,3 +30,8 @@ Thumbs.db
 
 # Claude Code (impostazioni personali)
 .claude/settings.local.json
+
+# Skills locali agent (non del progetto)
+.agents/
+agent/
+skills-lock.json

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>audiolayers</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>audiolayers</h1>
+  <div class="actions">
+    <button id="btn-add-layer">+ layer</button>
+    <button id="btn-export">esporta yaml</button>
+    <label class="filebtn">importa yaml<input type="file" id="file-import" accept=".yaml,.yml"></label>
+    <label class="toggle"><input type="checkbox" id="chk-dig"> download (dig)</label>
+    <button id="btn-render" class="primary">render</button>
+  </div>
+</header>
+
+<section id="globals" class="panel">
+  <h2>globali</h2>
+  <div id="global-params" class="params"></div>
+</section>
+
+<main id="layers"></main>
+
+<footer id="status-bar">
+  <span id="status">pronto</span>
+  <audio id="player" controls hidden></audio>
+  <a id="btn-download" hidden download="audiolayers.wav">scarica wav</a>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

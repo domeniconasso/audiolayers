@@ -68,3 +68,14 @@ senza blocco valgono i default: licenza `cc`, solo formati lossless
 (Flac/WAVE/AIFF — il loader non legge mp3).
 
 Via Makefile: `make render SCORE=brano.yaml`.
+
+## GUI web
+
+```
+make gui            # oppure: python -m src.web [--port 8000]
+```
+
+Apre su `http://localhost:8000`: controlli on/off per ogni parametro
+(spento = default del motore), editor breakpoint per gli envelope,
+toggle `download (dig)`, render asincrono con player e download del wav,
+export/import YAML compatibile con la CLI.

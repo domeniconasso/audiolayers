@@ -8,6 +8,12 @@ segue il versionamento semantico.
 
 ### Added
 
+- GUI web minimale (`make gui` / `python -m src.web`, Flask + vanilla JS):
+  controlli on/off per ogni parametro (off = default del motore), slider,
+  mini editor breakpoint per gli envelope, render come job asincrono con
+  player integrato e download, provisioning `--dig` con un toggle,
+  export/import YAML round-trip con la CLI. Stile bianco minimale.
+
 - Flag `--dig`: provisioning automatico del pool da Internet Archive via
   [archivedigger](https://github.com/MU-prj/archivedigger). Analizza la
   partitura (stessa sequenza di frammenti del render, stesso seed),
