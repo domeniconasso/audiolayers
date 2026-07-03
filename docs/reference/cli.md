@@ -6,6 +6,7 @@ tags: [cli]
 sources:
   - src/main.py
   - src/engine/render.py
+  - src/provisioning/pool_source.py
 ---
 
 # CLI Reference — audiolayers
@@ -21,6 +22,7 @@ python -m src.main SCORE.yaml -o OUT [opzioni]
 | `--format {wav,aiff,flac}` | dall'estensione di `-o`, altrimenti wav | formato contenitore; FLAC forza PCM 24 bit |
 | `--bit-depth {32f,24}` | `32f` | float32 (immune al clipping su file) o PCM 24 bit |
 | `--normalize` | off | porta il picco a −1 dBFS dopo il render (mai di default) |
+| `--dig` | off | prima del render popola i pool mancanti da Internet Archive (archivedigger); vedi [yaml.md § provision](yaml.md#blocco-provision-opzionale-solo-con---dig) |
 
 ## Output diagnostico
 
@@ -44,6 +46,25 @@ python -m src.main brano.yaml -o brano.flac --normalize
 
 # WAV PCM 24 bit con seed forzato per un render riproducibile
 python -m src.main brano.yaml -o brano.wav --bit-depth 24
+
+# pipeline completa: analizza la partitura, scarica il pool, renderizza
+python -m src.main scores/stream-crescente.yaml -o out/stream.wav --dig
 ```
+
+## `--dig`: provisioning automatico del pool
+
+Con `--dig` la CLI, prima del render e per ogni layer attivo:
+
+1. costruisce la stessa sequenza di frammenti del render (stesso seed) e
+   ne ricava i requisiti: *quanti* file servono (1 per frammento) e
+   *quanto* devono durare (almeno il frammento più lungo, al massimo 10 s);
+2. conta i file già idonei nel pool e scarica da Internet Archive solo la
+   differenza (idempotente: rilanciare non riscarica nulla);
+3. se l'archivio non copre il fabbisogno stampa `ATTENZIONE: ...` e il
+   render procede comunque (la selezione cicla sui file disponibili).
+
+La ricerca si orienta col blocco `provision` del layer ([yaml.md](yaml.md));
+senza blocco valgono i default: licenza `cc`, solo formati lossless
+(Flac/WAVE/AIFF — il loader non legge mp3).
 
 Via Makefile: `make render SCORE=brano.yaml`.

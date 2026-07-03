@@ -8,6 +8,7 @@ sources:
   - src/parameters/
   - src/envelopes/
   - src/strategies/
+  - src/provisioning/
   - src/shared/seeding.py
 ---
 
@@ -75,6 +76,7 @@ pan_range: 15.0              # ±15° di sparpagliamento intorno al centro
 | `pool` | richiesto | cartella con i file sorgente (wav/aif/aiff/flac); mono al SR di progetto in ingresso, stereo downmixati |
 | `solo` | — | se almeno un layer è in solo, suonano solo quelli |
 | `mute` | — | esclude il layer (ignorato se c'è un solo attivo) |
+| `provision` | — | ricerca Internet Archive per `--dig` (vedi sotto) |
 | `time_mode` | `absolute` | default per gli envelope del layer |
 
 ### Spaziatura: `fill_factor` e `distribution`
@@ -130,6 +132,24 @@ selection:
 `sequential` = in ordine alfabetico, ciclando; `rotation` = permutazione
 casuale per giro (ogni file una volta per giro); `random` = estrazioni
 indipendenti.
+
+### Blocco `provision` (opzionale, solo con `--dig`)
+
+```yaml
+provision:
+  search:                  # qualunque campo di ricerca archivedigger
+    collection: [field-recordings]
+    license: cc            # default se omesso
+  files:
+    prefer:
+      - [Flac, WAVE, AIFF] # default se omesso (il loader non legge mp3)
+```
+
+Senza `--dig` il blocco è ignorato e il pool resta una normale cartella
+locale. Con `--dig` orienta la ricerca su Internet Archive; i campi
+quantitativi (`max_items`, `filters.min/max_duration`,
+`max_files_per_item`) sono **calcolati** dall'analisi della partitura e
+non dichiarabili. Dettagli in [cli.md](cli.md#--dig-provisioning-automatico-del-pool).
 
 ### Uscita del frammento
 

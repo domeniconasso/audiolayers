@@ -27,3 +27,6 @@ tests/golden/tmp/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Claude Code (impostazioni personali)
+.claude/settings.local.json

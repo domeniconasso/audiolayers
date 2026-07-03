@@ -15,10 +15,7 @@ import yaml
 
 from src.audio.pan import pan_stereo
 from src.audio.source_loader import load_mono
-from src.core.fragment_sequence import build_fragment_sequence
-from src.parameters.parser import create_layer_parameters
-from src.shared.seeding import rng_for
-from src.strategies.duration_strategy import build_duration_strategy
+from src.core.layer_plan import build_layer_plan
 from src.strategies.fragment_envelope import build_fragment_envelope
 from src.strategies.overflow_strategy import build_overflow_strategy
 from src.strategies.selection_strategy import build_selection_strategy
@@ -145,24 +142,9 @@ def _resolve_seed(data: dict):
 def _render_layer(layer: dict, sample_rate: int, seed) -> np.ndarray:
     """Renderizza un layer: sequenza di frammenti → timeline stereo."""
     layer_id = layer.get("layer_id", "layer")
-    target_duration = float(layer["duration"])
-    time_mode = layer.get("time_mode", "absolute")
 
-    params = create_layer_parameters(
-        layer, layer_id=layer_id, duration=target_duration, seed=seed,
-        time_mode=time_mode,
-    )
-    duration_strategy = build_duration_strategy(
-        layer.get("fragment", {}), layer_id=layer_id,
-        duration=target_duration, seed=seed, time_mode=time_mode,
-    )
-    fragments = build_fragment_sequence(
-        duration_strategy=duration_strategy,
-        fill_factor=params["fill_factor"],
-        distribution=params["distribution"],
-        target_duration=target_duration,
-        rng=rng_for(seed, layer_id, "onset"),
-    )
+    plan = build_layer_plan(layer, seed)
+    params, fragments = plan.params, plan.fragments
 
     pool_files = _scan_pool(Path(layer["pool"]))
     # Precarica il pool una volta sola (mono, al SR di progetto, D13).
