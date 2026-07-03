@@ -95,6 +95,24 @@ class ArchiveDiggerSource:
         return Config.build(job=job)
 
 
+def provision_score(score_path, client=None) -> None:
+    """Assicura il pool di ogni layer attivo della partitura (flag --dig).
+
+    Il seed dell'analisi è quello della partitura; se assente si usa 0:
+    per i layer deterministici non cambia nulla, per quelli casuali il
+    conteggio è comunque una fotografia valida quanto un'altra.
+    """
+    import yaml
+
+    from src.engine.render import _filter_solo_mute
+
+    data = yaml.safe_load(Path(score_path).read_text(encoding="utf-8"))
+    seed = data.get("seed") if data.get("seed") is not None else 0
+    source = ArchiveDiggerSource(client=client)
+    for layer in _filter_solo_mute(data["layers"]):
+        source.ensure(layer, seed)
+
+
 def _merge(base: dict, overlay: dict) -> None:
     for key, value in overlay.items():
         if isinstance(value, dict) and isinstance(base.get(key), dict):

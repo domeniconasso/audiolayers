@@ -1,0 +1,47 @@
+"""Piano di un layer: parametri + sequenza di frammenti, prima dell'audio.
+
+È il punto condiviso tra render e analyzer di provisioning (plan 002):
+entrambi devono costruire ESATTAMENTE la stessa sequenza (stesse Strategy,
+stesso seed namespaced), il render per suonarla, l'analyzer per ricavarne
+i requisiti di pool. Un solo assemblaggio = niente divergenze silenziose.
+"""
+
+from dataclasses import dataclass
+
+from src.core.fragment_sequence import FragmentSpec, build_fragment_sequence
+from src.parameters.parameter import Parameter
+from src.parameters.parser import create_layer_parameters
+from src.shared.seeding import rng_for
+from src.strategies.duration_strategy import build_duration_strategy
+
+
+@dataclass(frozen=True)
+class LayerPlan:
+    """Parametri risolti e frammenti posati di un layer."""
+
+    params: dict[str, Parameter]
+    fragments: list[FragmentSpec]
+
+
+def build_layer_plan(layer: dict, seed) -> LayerPlan:
+    """Assembla parametri e sequenza di frammenti dal dict YAML del layer."""
+    layer_id = layer.get("layer_id", "layer")
+    target_duration = float(layer["duration"])
+    time_mode = layer.get("time_mode", "absolute")
+
+    params = create_layer_parameters(
+        layer, layer_id=layer_id, duration=target_duration, seed=seed,
+        time_mode=time_mode,
+    )
+    duration_strategy = build_duration_strategy(
+        layer.get("fragment", {}), layer_id=layer_id,
+        duration=target_duration, seed=seed, time_mode=time_mode,
+    )
+    fragments = build_fragment_sequence(
+        duration_strategy=duration_strategy,
+        fill_factor=params["fill_factor"],
+        distribution=params["distribution"],
+        target_duration=target_duration,
+        rng=rng_for(seed, layer_id, "onset"),
+    )
+    return LayerPlan(params=params, fragments=fragments)
