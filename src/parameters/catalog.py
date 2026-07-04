@@ -72,16 +72,16 @@ def catalog() -> dict:
                       "una dissolvenza globale per-campione."),
         ],
         "layer": [
+            _free("onset", "onset (s)", 0.0, minimo=0.0, massimo=36000.0,
+                  step=0.5, ui=(0, 300),
+                  info="Quando il layer entra sulla timeline globale, in "
+                       "secondi. Scalare per natura."),
             _free("duration", "durata (s)", 20.0, minimo=0.001,
                   massimo=36000.0, step=1, ui=(1, 300),
                   info="Durata-obiettivo del layer. Non può essere una "
                        "curva: è l'asse del tempo su cui corrono tutte le "
                        "altre curve. L'ultimo grano non viene mai mozzato, "
                        "quindi il layer può sforare di poco."),
-            _free("onset", "onset (s)", 0.0, minimo=0.0, massimo=36000.0,
-                  step=0.5, ui=(0, 300),
-                  info="Quando il layer entra sulla timeline globale, in "
-                       "secondi. Scalare per natura."),
             _free("time_mode", "time mode", "absolute", kind="select",
                   options=["absolute", "normalized"],
                   info="Tempi degli envelope del layer: absolute = secondi; "
