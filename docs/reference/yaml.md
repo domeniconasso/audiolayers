@@ -141,7 +141,7 @@ indipendenti.
 ```yaml
 provision:
   mode: per-fragment       # | threshold | fixed (quanti file garantire)
-  files: 20                # fixed: esatti; threshold: minimo
+  count: 20                # fixed: esatti; threshold: minimo
   variety: 0.5             # threshold: frazione del fabbisogno (0..1)
   min_margin: 1.5          # margine sulla durata minima richiesta
   max_factor: 20           # durata max file = min x fattore (mai < 10 s)

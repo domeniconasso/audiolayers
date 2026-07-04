@@ -22,7 +22,7 @@ class TestApplyPolicy:
         assert apply_policy(self.REQ, {}) == self.REQ
 
     def test_fixed_pool_di_n_file_che_ciclano(self):
-        out = apply_policy(self.REQ, {"mode": "fixed", "files": 20})
+        out = apply_policy(self.REQ, {"mode": "fixed", "count": 20})
         assert out.files_needed == 20
 
     def test_threshold_variety_come_frazione(self):
@@ -31,7 +31,7 @@ class TestApplyPolicy:
 
     def test_threshold_files_minimo_esplicito_vince(self):
         out = apply_policy(self.REQ, {"mode": "threshold",
-                                      "variety": 0.1, "files": 30})
+                                      "variety": 0.1, "count": 30})
         assert out.files_needed == 30
 
     def test_margine_sul_minimo_e_max_derivato(self):

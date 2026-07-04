@@ -57,7 +57,7 @@ class TestPolicyProvision:
         Config archivedigger (campi sconosciuti = errore)."""
         pool = tmp_path / "pool"
         layer = dict(DET_LAYER, pool=str(pool),
-                     provision={"mode": "fixed", "files": 2,
+                     provision={"mode": "fixed", "count": 2,
                                 "search": {"license": "cc"}})
         ArchiveDiggerSource(client=FakeArchiveClient()).ensure(layer, seed=1)
         assert count_suitable_files(pool, min_duration=0.5) == 2
@@ -94,9 +94,9 @@ class TestDiggerGlobale:
         pool = tmp_path / "pool"
         score = {
             "seed": 1,
-            "provision": {"mode": "fixed", "files": 3},
+            "provision": {"mode": "fixed", "count": 3},
             "layers": [dict(DET_LAYER, pool=str(pool),
-                            provision={"mode": "fixed", "files": 50})],
+                            provision={"mode": "fixed", "count": 50})],
         }
         path = tmp_path / "s.yaml"
         path.write_text(_yaml.safe_dump(score), encoding="utf-8")

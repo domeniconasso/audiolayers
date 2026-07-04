@@ -177,9 +177,9 @@ def catalog() -> dict:
                   options=["per-fragment", "threshold", "fixed"],
                   info="Quanti file garantire nel pool: per-fragment = 1 "
                        "per grano (nessun riuso); threshold = frazione del "
-                       "fabbisogno (variety) e/o minimo esplicito (files); "
+                       "fabbisogno (variety) e/o minimo esplicito (count); "
                        "fixed = esattamente N file che ciclano."),
-            _free("provision.files", "n. file", 20, kind="int",
+            _free("provision.count", "n. file", 20, kind="int",
                   info="Numero di file: esatto in modalità fixed, minimo "
                        "in modalità threshold."),
             _free("provision.variety", "variety", 1.0, minimo=0.0,

@@ -27,7 +27,7 @@ _MAX_ROUNDS = 3
 
 #: Chiavi di POLITICA del blocco provision (issue #8): le consuma
 #: apply_policy, non devono arrivare alla Config archivedigger.
-_POLICY_KEYS = ("mode", "files", "variety", "min_margin", "max_factor")
+_POLICY_KEYS = ("mode", "count", "variety", "min_margin", "max_factor")
 
 
 def _split_policy(provision: dict | None) -> tuple[dict, dict]:

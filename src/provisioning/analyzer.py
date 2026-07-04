@@ -27,9 +27,9 @@ def apply_policy(req: PoolRequirements, provision: dict) -> PoolRequirements:
     (issue #8): modalità di selezione file e margini automatici.
 
     - `mode: per-fragment` (default): 1 file per frammento;
-    - `mode: fixed` + `files: N`: pool di N file che ciclano;
+    - `mode: fixed` + `count: N`: pool di N file che ciclano;
     - `mode: threshold`: `variety` (0..1, frazione del fabbisogno) e/o
-      `files` (minimo esplicito) — vince il maggiore;
+      `count` (minimo esplicito) — vince il maggiore;
     - `min_margin`: moltiplicatore sulla durata minima richiesta;
     - `max_factor`: max = min × factor, mai sotto il tetto base.
     """
@@ -40,11 +40,11 @@ def apply_policy(req: PoolRequirements, provision: dict) -> PoolRequirements:
     mode = provision.get("mode", "per-fragment")
     files_needed = req.files_needed
     if mode == "fixed":
-        files_needed = max(1, int(provision.get("files", 1)))
+        files_needed = max(1, int(provision.get("count", 1)))
     elif mode == "threshold":
         by_variety = math.ceil(
             req.files_needed * float(provision.get("variety", 1.0)))
-        files_needed = max(int(provision.get("files", 0)), by_variety, 1)
+        files_needed = max(int(provision.get("count", 0)), by_variety, 1)
     elif mode != "per-fragment":
         raise InvalidFieldValueError(
             f"provision.mode '{mode}' sconosciuta "

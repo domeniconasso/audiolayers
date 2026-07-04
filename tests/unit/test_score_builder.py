@@ -100,12 +100,12 @@ class TestDiggerGlobaleNelBuilder:
         stato = stato_minimo()
         stato["global"].update({
             "provision.mode": {"enabled": True, "value": "fixed"},
-            "provision.files": {"enabled": True, "value": 15},
+            "provision.count": {"enabled": True, "value": 15},
             "provision.search.license": {"enabled": True, "value": "cc"},
         })
         score = build_score(stato)
         assert score["provision"]["mode"] == "fixed"
-        assert score["provision"]["files"] == 15
+        assert score["provision"]["count"] == 15
         assert score["provision"]["search"]["license"] == "cc"
         back = parse_score(score)
         assert back["global"]["provision.mode"]["value"] == "fixed"
