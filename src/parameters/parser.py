@@ -68,6 +68,16 @@ def _get_nested(data: dict, path: str, default):
     return current
 
 
+def validate_parameter(value, param_name: str) -> None:
+    """Valida un valore (float o Envelope) contro i bounds del registry.
+
+    Punto pubblico per i consumatori fuori dallo schema dichiarativo
+    (master_volume, attack/release): stessi bounds, stesso errore.
+    """
+    bounds = get_parameter_definition(param_name)
+    _validate(value, param_name, bounds.min_val, bounds.max_val, "base")
+
+
 def _validate(value, param_name: str, min_bound, max_bound,
               value_type: str) -> None:
     """Valida float o Envelope (ogni breakpoint) contro i bounds."""

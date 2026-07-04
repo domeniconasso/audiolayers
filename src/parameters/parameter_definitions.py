@@ -38,6 +38,8 @@ PARAMETERS: dict[str, ParameterBounds] = {
     "pan": ParameterBounds(min_val=None, max_val=None,
                            max_range=None),  # gradi, mod 360 (D12)
     "master_volume": ParameterBounds(min_val=-120.0, max_val=12.0),
+    "fragment_attack": ParameterBounds(min_val=0.0, max_val=0.5),
+    "fragment_release": ParameterBounds(min_val=0.0, max_val=0.5),
 }
 
 

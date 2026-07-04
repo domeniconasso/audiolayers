@@ -14,15 +14,14 @@ import soundfile as sf
 import yaml
 
 from src.audio.pan import pan_stereo
+from src.audio.pool import scan_pool
 from src.audio.source_loader import load_mono
-from src.core.layer_plan import build_layer_plan
+from src.core.layer_plan import active_layers, build_layer_plan
 from src.strategies.fragment_envelope import build_fragment_envelope
 from src.strategies.overflow_strategy import build_overflow_strategy
 from src.strategies.selection_strategy import build_selection_strategy
 
 DEFAULT_SAMPLE_RATE = 48000
-
-AUDIO_EXTENSIONS = (".wav", ".aif", ".aiff", ".flac")
 
 
 def render_score(score_path: Path, output_path: Path, *,
@@ -37,13 +36,14 @@ def render_score(score_path: Path, output_path: Path, *,
     """
     data = yaml.safe_load(Path(score_path).read_text(encoding="utf-8"))
     sample_rate = int(data.get("sample_rate", DEFAULT_SAMPLE_RATE))
+    master = _build_master(data.get("master_volume", 0.0))  # valida SUBITO
     seed = _resolve_seed(data)
 
-    active_layers = _filter_solo_mute(data["layers"])
+    layers = active_layers(data["layers"])
 
     # Ogni layer ha un onset sulla timeline globale (D15).
     placed = []
-    for layer in active_layers:
+    for layer in layers:
         onset_frames = round(float(layer.get("onset", 0.0)) * sample_rate)
         placed.append((onset_frames, _render_layer(layer, sample_rate, seed)))
 
@@ -52,7 +52,7 @@ def render_score(score_path: Path, output_path: Path, *,
     for offset, buf in placed:
         mix[offset:offset + len(buf)] += buf
 
-    mix = _apply_master(mix, data.get("master_volume", 0.0), sample_rate)
+    mix = _apply_master(mix, master, sample_rate)
     mix = _report_peak_and_normalize(mix, normalize)
 
     fmt, subtype = _resolve_format(output_path, output_format, bit_depth)
@@ -60,25 +60,23 @@ def render_score(score_path: Path, output_path: Path, *,
              format=fmt, subtype=subtype)
 
 
-def _filter_solo_mute(layers: list) -> list:
-    """Convenzione PGE: se esistono layer in solo, suonano solo quelli;
-    altrimenti suonano tutti tranne i mutati."""
-    def flag(layer, name):
-        return name in layer and layer[name] is not False
-
-    soloed = [l for l in layers if flag(l, "solo")]
-    if soloed:
-        return soloed
-    return [l for l in layers if not flag(l, "mute")]
-
-
-def _apply_master(mix: np.ndarray, master_volume,
-                  sample_rate: int) -> np.ndarray:
-    """master_volume in dB, scalare o envelope (curva per-campione)."""
-    from src.envelopes.envelope import Envelope
+def _build_master(master_volume):
+    """Costruisce e VALIDA il master contro i bounds del registry:
+    la partitura fuori range non parte proprio (niente sorprese a fine
+    render)."""
     from src.envelopes.envelope_builder import build_envelope
+    from src.parameters.parser import validate_parameter
 
     master = build_envelope(master_volume)
+    validate_parameter(master, "master_volume")
+    return master
+
+
+def _apply_master(mix: np.ndarray, master,
+                  sample_rate: int) -> np.ndarray:
+    """master in dB (float o Envelope), curva per-campione."""
+    from src.envelopes.envelope import Envelope
+
     if isinstance(master, Envelope):
         times = np.arange(len(mix)) / sample_rate
         gain = 10.0 ** (master.evaluate_array(times) / 20.0)
@@ -146,7 +144,7 @@ def _render_layer(layer: dict, sample_rate: int, seed) -> np.ndarray:
     plan = build_layer_plan(layer, seed)
     params, fragments = plan.params, plan.fragments
 
-    pool_files = _scan_pool(Path(layer["pool"]))
+    pool_files = scan_pool(Path(layer["pool"]))
     # Precarica il pool una volta sola (mono, al SR di progetto, D13).
     sources = [load_mono(p, sample_rate) for p in pool_files]
     selection = build_selection_strategy(
@@ -181,14 +179,3 @@ def _render_layer(layer: dict, sample_rate: int, seed) -> np.ndarray:
         buffer[start:end] += stereo[: end - start]
 
     return buffer
-
-
-def _scan_pool(pool_dir: Path) -> list[Path]:
-    """File audio del pool, in ordine alfabetico stabile."""
-    files = sorted(
-        p for p in pool_dir.iterdir()
-        if p.suffix.lower() in AUDIO_EXTENSIONS
-    )
-    if not files:
-        raise FileNotFoundError(f"Nessun file audio nel pool: {pool_dir}")
-    return files

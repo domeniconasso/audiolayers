@@ -1,83 +1,36 @@
 /* audiolayers gui — stato controlli -> API -> wav */
 "use strict";
 
-/* Definizione parametri: rispecchia bounds e default del motore.
-   env: true = envelope-abile (editor breakpoint). */
-const GLOBAL_DEFS = [
-  { path: "sample_rate", label: "sample rate", kind: "select",
-    options: [44100, 48000, 96000], def: 48000,
-    info: "Frequenza di campionamento del progetto. Le sorgenti vengono ricampionate in ingresso (soxr VHQ)." },
-  { path: "seed", label: "seed", kind: "int", def: 424242,
-    info: "Riproducibilità: stesso seed → render identico bit per bit. Ogni layer e parametro ha il suo generatore derivato dal seed." },
-  { path: "master_volume", label: "master (dB)", min: -60, max: 12, step: 0.5, def: 0, env: true,
-    info: "Guadagno sul mix finale, in dB. Come curva diventa una dissolvenza globale per-campione." },
-];
-const LAYER_DEFS = [
-  { path: "duration", label: "durata (s)", min: 1, max: 300, step: 1, def: 20,
-    info: "Durata-obiettivo del layer. Non può essere una curva: è l'asse del tempo su cui corrono tutte le altre curve. L'ultimo grano non viene mai mozzato, quindi il layer può sforare di poco." },
-  { path: "onset", label: "onset (s)", min: 0, max: 300, step: 0.5, def: 0,
-    info: "Quando il layer entra sulla timeline globale, in secondi. Scalare per natura." },
-  { path: "fill_factor", label: "fill factor", min: 0.05, max: 5, step: 0.05, def: 1, env: true,
-    info: "Densità: intervallo tra i grani = durata grano ÷ fill factor. 1 = grani uno dietro l'altro; sotto 1 = silenzi; sopra 1 = sovrapposizioni (crossfade emergenti)." },
-  { path: "fill_factor_range", label: "fill factor ±", min: 0, max: 2.5, step: 0.05, def: 0, env: true,
-    info: "Variazione casuale del fill factor per grano: valore estratto uniformemente in [base−range, base+range] (tendency mask di Truax)." },
-  { path: "distribution", label: "distribution", min: 0, max: 1, step: 0.01, def: 0, env: true,
-    info: "Regolarità del tempo: 0 = metronomo, 1 = asincrono (intervalli casuali 0..2× l'intervallo sincrono), valori intermedi = miscela." },
-  { path: "fragment.duration", label: "grano (s)", min: 0.001, max: 2, step: 0.001, def: 0.5, env: true, mode: "tendency",
-    info: "Durata di ogni grano, in secondi. Come curva fa accelerare/rallentare il flusso (grani corti = tempo veloce)." },
-  { path: "fragment.duration_range", label: "grano ± (s)", min: 0, max: 1, step: 0.001, def: 0, env: true, mode: "tendency",
-    info: "Variazione casuale della durata del grano attorno al valore base. 0 = tutti i grani uguali." },
-  { path: "fragment.rhythm.bpm", label: "bpm", min: 20, max: 300, step: 1, def: 120, env: true, mode: "rhythm",
-    info: "Velocità del pattern ritmico. Come curva = accelerando/ritardando continui." },
-  { path: "fragment.rhythm.pattern", label: "pattern", kind: "numlist", def: [0.25, 0.125, 0.125], mode: "rhythm",
-    info: "Valori ritmici ciclici in frazioni di semibreve: 0.25 = semiminima (un movimento), 0.125 = croma, 0.0625 = semicroma. Separati da virgola." },
-  { path: "time_mode", label: "time mode", kind: "select",
-    options: ["absolute", "normalized"], def: "absolute",
-    info: "Tempi degli envelope del layer: absolute = secondi; normalized = frazioni 0..1 scalate sulla durata (curve riusabili su layer di durate diverse)." },
-  { path: "fragment.envelope", label: "inviluppo", kind: "select",
-    options: ["raised_cosine", "rectangle"], def: "raised_cosine",
-    info: "Forma d'ampiezza del grano: raised_cosine = campana morbida anti-click; rectangle = nessuna sagomatura (bordi netti)." },
-  { path: "fragment.attack", label: "attack (s)", min: 0, max: 0.1, step: 0.001, def: 0.008,
-    info: "Fade-in del grano in secondi (anti-click). Scalare nel motore." },
-  { path: "fragment.release", label: "release (s)", min: 0, max: 0.1, step: 0.001, def: 0.01,
-    info: "Fade-out del grano in secondi (anti-click). Scalare nel motore." },
-  { path: "pointer.start", label: "pointer", min: 0, max: 1, step: 0.01, def: 0, env: true,
-    info: "Punto di lettura nel file sorgente: 0 = inizio, 0.5 = metà, 1 = fine. Come curva attraversa il file lungo il brano (time-stretch granulare)." },
-  { path: "pointer.start_range", label: "pointer ±", min: 0, max: 1, step: 0.01, def: 0, env: true,
-    info: "Variazione casuale del punto di lettura. 0.5 con pointer 0.5 = ogni grano pesca ovunque nel file." },
-  { path: "pointer.overflow", label: "overflow", kind: "select",
-    options: ["clamp_back", "loop", "zero_pad"], def: "clamp_back",
-    info: "Se il grano supera la fine del file: clamp_back arretra del minimo necessario; loop riparte dall'inizio; zero_pad completa con silenzio." },
-  { path: "selection.strategy", label: "selezione", kind: "select",
-    options: ["sequential", "rotation", "random"], def: "sequential",
-    info: "Quale file suona ogni grano: sequential = in ordine alfabetico ciclando; rotation = permutazione casuale per giro (ogni file una volta); random = estrazioni indipendenti." },
-  { path: "volume", label: "volume (dB)", min: -60, max: 12, step: 0.5, def: 0, env: true,
-    info: "Guadagno del layer in dB, campionato al momento di posa di ogni grano. Come curva = crescendo/diminuendo." },
-  { path: "volume_range", label: "volume ± (dB)", min: 0, max: 12, step: 0.5, def: 0, env: true,
-    info: "Variazione casuale del volume per grano, in ±dB: respiro dinamico." },
-  { path: "pan", label: "pan (°)", min: -360, max: 360, step: 1, def: 0, env: true,
-    info: "Posizione stereo in gradi: 0 = centro, +45 = tutto a sinistra, −45 = tutto a destra. Spazio circolare: una curva sempre crescente fa RUOTARE il suono." },
-  { path: "pan_range", label: "pan ± (°)", min: 0, max: 180, step: 1, def: 0, env: true,
-    info: "Sparpagliamento stereo casuale attorno al pan, in ±gradi." },
-];
+/* Le definizioni dei parametri NON vivono qui: arrivano dal motore
+   via /api/params (fonte unica: bounds, default, enum, env, info).
+   `boot()` le carica e poi disegna la GUI. */
+let GLOBAL_DEFS = [], LAYER_DEFS = [], PROVISION_DEFS = [];
+let ALL_LAYER_DEFS = [];
+let DEF_BY_PATH = {};
 
-/* Blocco digger (provision): usato solo col toggle "download (dig)".
-   I campi quantitativi (durate, conteggi) li calcola il motore. */
-const PROVISION_DEFS = [
-  { path: "provision.search.license", label: "licenza", kind: "select",
-    options: ["cc", "publicdomain", "cc-commercial", "any"], def: "cc",
-    info: "Diritti d'uso dei file cercati su Internet Archive: cc = Creative Commons, publicdomain = pubblico dominio, cc-commercial = CC senza clausola NC, any = nessun filtro." },
-  { path: "provision.search.collection", label: "collection", kind: "list", def: [],
-    info: "Collezioni di Internet Archive in cui cercare (separate da virgola). Vuoto = tutte. Verifica che la collection esista: nomi sbagliati = zero risultati." },
-  { path: "provision.search.subject", label: "subject", kind: "list", def: [],
-    info: "Tag/argomenti degli item (separati da virgola), es. nature, ambient." },
-  { path: "provision.search.query", label: "query lucene", kind: "text", def: "",
-    info: "Via di fuga: sintassi Lucene grezza aggiunta alla ricerca. Es. format:(\"WAVE\" OR \"Flac\") per item che contengono file lossless." },
-  { path: "provision.files.prefer", label: "formati", kind: "listlist",
-    def: [["Flac", "WAVE", "AIFF"]],
-    info: "Formati preferiti (separati da virgola, a pari merito). Il motore legge solo wav/aif/flac: niente mp3. Quanti file scaricare e le durate min/max li calcola l'analisi della partitura." },
-];
-const ALL_LAYER_DEFS = [...LAYER_DEFS, ...PROVISION_DEFS];
+function defFromCatalog(entry) {
+  const d = {
+    path: entry.path, label: entry.label, def: entry.default,
+    env: !!entry.env, info: entry.info,
+    hardMin: entry.min, hardMax: entry.max,
+    min: entry.ui?.min ?? entry.min, max: entry.ui?.max ?? entry.max,
+    step: entry.step,
+  };
+  if (entry.mode) d.mode = entry.mode;
+  if (entry.options) d.options = entry.options;
+  if (entry.kind !== "float") d.kind = entry.kind;
+  return d;
+}
+
+async function loadParamDefs() {
+  const cat = await (await fetch("/api/params")).json();
+  GLOBAL_DEFS = cat.global.map(defFromCatalog);
+  LAYER_DEFS = cat.layer.map(defFromCatalog);
+  PROVISION_DEFS = cat.provision.map(defFromCatalog);
+  ALL_LAYER_DEFS = [...LAYER_DEFS, ...PROVISION_DEFS];
+  DEF_BY_PATH = Object.fromEntries(
+    [...GLOBAL_DEFS, ...ALL_LAYER_DEFS].map(d => [d.path, d]));
+}
 
 const state = { global: {}, layers: [] };
 let layerCounter = 0;
@@ -427,9 +380,19 @@ function renderEnvPanel() {
       inp.step = lane.def.step ?? 1;
       inp.onchange = () => {
         const v = parseFloat(inp.value);
-        if (!isNaN(v)) c[key] = v;
+        if (isNaN(v)) { inp.value = c[key]; return; }
+        // Non solo scala visiva: i punti della curva vengono RIMAPPATI
+        // nel nuovo intervallo (stesse posizioni, nuovi valori reali).
+        const oldMin = c.viewMin, oldMax = c.viewMax;
+        c[key] = v;
         if (c.viewMin >= c.viewMax) c.viewMax = c.viewMin + (lane.def.step ?? 1);
-        renderEnvPanel();
+        const span = oldMax - oldMin || 1;
+        c.value = c.value.map(([t, val]) => {
+          const frac = (val - oldMin) / span;
+          const nuovo = c.viewMin + frac * (c.viewMax - c.viewMin);
+          return [t, Number(nuovo.toFixed(4))];
+        });
+        rerender();
       };
       return inp;
     };
@@ -439,11 +402,19 @@ function renderEnvPanel() {
     sep.textContent = "…";
     range.append(lo, sep, hi);
 
+    const reset = document.createElement("button");
+    reset.className = "envbtn"; reset.textContent = "reset";
+    reset.title = "curva piatta al default, asse ai bounds del parametro";
+    reset.onclick = () => {
+      c.viewMin = lane.def.min; c.viewMax = lane.def.max;
+      c.value = [[0, lane.def.def], [lane.getDur(), lane.def.def]];
+      rerender();
+    };
     const fisso = document.createElement("button");
     fisso.className = "envbtn"; fisso.textContent = "fisso";
     fisso.title = "torna a valore fisso (primo punto)";
     fisso.onclick = () => { lane.control.value = lane.control.value[0][1]; rerender(); };
-    head.append(title, range, fisso);
+    head.append(title, range, reset, fisso);
     const cv = document.createElement("canvas");
     cv.className = "envelope";
     box.append(head, cv);
@@ -599,8 +570,6 @@ const daw = {
   el: document.getElementById("daw"),
   open: false, view: "wave", url: null, buffer: null, spec: null,
 };
-const DEF_BY_PATH = Object.fromEntries(
-  [...GLOBAL_DEFS, ...ALL_LAYER_DEFS].map(d => [d.path, d]));
 const player = document.getElementById("player");
 
 function dawWidth() { return parseInt(localStorage.getItem("dawW") || 460, 10); }
@@ -814,7 +783,11 @@ document.getElementById("daw-divider").addEventListener("pointerdown", ev => {
 window.addEventListener("resize", () => { if (daw.open) { applyPanelsLayout(); dawDraw(); } });
 themeBtn.addEventListener("click", () => { if (daw.open) { daw.spec = null; dawDraw(); } });
 
-state.layers.push(newLayer());
-renderGlobals();
-renderLayers();
-applyPanelsLayout();
+async function boot() {
+  await loadParamDefs();
+  state.layers.push(newLayer());
+  renderGlobals();
+  renderLayers();
+  applyPanelsLayout();
+}
+boot();

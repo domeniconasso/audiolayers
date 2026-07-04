@@ -1,18 +1,17 @@
 """Strategy di provisioning del pool (plan 002, D-P4/D-P5/D-P7).
 
-Due varianti sotto la stessa interfaccia:
-- LocalPoolSource: il pool è una cartella locale già pronta (default);
-- ArchiveDiggerSource: analizza il layer e scarica da Internet Archive
-  i file mancanti via archivedigger (client iniettabile per i test).
+ArchiveDiggerSource analizza il layer e scarica da Internet Archive i
+file mancanti via archivedigger (client iniettabile per i test). Senza
+--dig il provisioning semplicemente non viene invocato: il pool è una
+normale cartella locale, non serve una strategy no-op per dirlo.
 """
 
 from pathlib import Path
 
-import soundfile as sf
 from archivedigger.api import dig
 from archivedigger.config import Config
 
-from src.engine.render import AUDIO_EXTENSIONS
+from src.audio.pool import count_suitable_files
 from src.provisioning.analyzer import analyze_layer
 
 #: Default di ricerca quando la partitura non dice nulla (D-P4).
@@ -24,13 +23,6 @@ _DEFAULT_PROVISION = {
 
 #: Giri di ricerca al massimo: a ogni giro max_items raddoppia (D-P5).
 _MAX_ROUNDS = 3
-
-
-class LocalPoolSource:
-    """Il pool è una cartella locale già pronta: nessuna azione."""
-
-    def ensure(self, layer: dict, seed) -> None:
-        return None
 
 
 class ArchiveDiggerSource:
@@ -104,12 +96,12 @@ def provision_score(score_path, client=None) -> None:
     """
     import yaml
 
-    from src.engine.render import _filter_solo_mute
+    from src.core.layer_plan import active_layers
 
     data = yaml.safe_load(Path(score_path).read_text(encoding="utf-8"))
     seed = data.get("seed") if data.get("seed") is not None else 0
     source = ArchiveDiggerSource(client=client)
-    for layer in _filter_solo_mute(data["layers"]):
+    for layer in active_layers(data["layers"]):
         source.ensure(layer, seed)
 
 
@@ -119,22 +111,3 @@ def _merge(base: dict, overlay: dict) -> None:
             _merge(base[key], value)
         else:
             base[key] = value
-
-
-def count_suitable_files(pool_dir: Path, *, min_duration: float) -> int:
-    """Quanti file del pool durano almeno `min_duration` secondi.
-
-    La durata è quella reale letta dall'header (non metadati esterni).
-    Cartella assente o vuota → 0: il chiamante deciderà di scaricare.
-    """
-    pool_dir = Path(pool_dir)
-    if not pool_dir.is_dir():
-        return 0
-    count = 0
-    for path in pool_dir.iterdir():
-        if path.suffix.lower() not in AUDIO_EXTENSIONS:
-            continue
-        info = sf.info(str(path))
-        if info.frames / info.samplerate >= min_duration:
-            count += 1
-    return count
