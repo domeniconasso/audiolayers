@@ -307,6 +307,20 @@ function renderGlobals() {
     if (!state.global[def.path]) state.global[def.path] = newControl(def);
     box.append(paramRow(def, state.global[def.path], () => 60));
   }
+  const globalDig = document.getElementById("global-dig");
+  globalDig.innerHTML = "";
+  if (document.getElementById("chk-digall").checked) {
+    const tit = document.createElement("h2");
+    tit.textContent = "digger globale";
+    tit.style.margin = "8px 0 4px";
+    const grid = document.createElement("div");
+    grid.className = "params";
+    for (const def of PROVISION_DEFS) {
+      if (!state.global[def.path]) state.global[def.path] = newControl(def);
+      grid.append(paramRow(def, state.global[def.path], () => 60));
+    }
+    globalDig.append(tit, grid);
+  }
   setColumnFlow(box);
 }
 
@@ -376,8 +390,9 @@ function renderLayers() {
       grid.append(paramRow(def, layer.params[def.path], getDur));
     }
     panel.append(grid);
-    // Sezione digger: esiste solo se il toggle "download (dig)" è attivo.
-    if (document.getElementById("chk-dig").checked) {
+    // Sezione digger per-layer: solo con "download (dig)" attivo e
+    // digger globale spento (il globale la sostituisce).
+    if (document.getElementById("chk-dig").checked && !document.getElementById("chk-digall").checked) {
       const digTitle = document.createElement("h2");
       digTitle.textContent = "digger";
       digTitle.style.margin = "1rem 0 .6rem";
@@ -593,6 +608,11 @@ document.getElementById("btn-add-layer").onclick = () => {
   state.layers.push(newLayer()); renderLayers();
 };
 document.getElementById("chk-dig").onchange = renderLayers;
+document.getElementById("chk-digall").onchange = () => {
+  // Globale attivo: spegne i blocchi provision dei layer nello stato
+  // (il motore comunque li ignora quando c'e' il blocco top-level).
+  rerender();
+};
 
 /* ---------- tema chiaro/scuro ---------- */
 const themeBtn = document.getElementById("btn-theme");

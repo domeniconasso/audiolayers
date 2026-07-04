@@ -6,6 +6,14 @@ segue il versionamento semantico.
 
 ## [Unreleased]
 
+### Added
+
+- Issue #8 — politiche di provisioning: `provision.mode`
+  (per-fragment/threshold/fixed) con `files`/`variety`, margini
+  automatici `min_margin` e `max_factor`; blocco `provision` anche a
+  livello di partitura (digger globale, fabbisogni aggregati per pool).
+  In GUI: controlli nella sezione digger e toggle «digger globale».
+
 ### Changed
 
 - Griglia ritmica e durata del grano ora componibili: `fragment.rhythm`
