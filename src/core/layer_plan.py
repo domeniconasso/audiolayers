@@ -15,6 +15,19 @@ from src.shared.seeding import rng_for
 from src.strategies.duration_strategy import build_duration_strategy
 
 
+def active_layers(layers: list) -> list:
+    """Convenzione solo/mute (PGE): se esistono layer in solo suonano
+    solo quelli, altrimenti tutti tranne i mutati. Vale per il render e
+    per chiunque debba sapere quali layer contano (es. provisioning)."""
+    def flag(layer, name):
+        return name in layer and layer[name] is not False
+
+    soloed = [l for l in layers if flag(l, "solo")]
+    if soloed:
+        return soloed
+    return [l for l in layers if not flag(l, "mute")]
+
+
 @dataclass(frozen=True)
 class LayerPlan:
     """Parametri risolti e frammenti posati di un layer."""

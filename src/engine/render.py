@@ -14,15 +14,14 @@ import soundfile as sf
 import yaml
 
 from src.audio.pan import pan_stereo
+from src.audio.pool import scan_pool
 from src.audio.source_loader import load_mono
-from src.core.layer_plan import build_layer_plan
+from src.core.layer_plan import active_layers, build_layer_plan
 from src.strategies.fragment_envelope import build_fragment_envelope
 from src.strategies.overflow_strategy import build_overflow_strategy
 from src.strategies.selection_strategy import build_selection_strategy
 
 DEFAULT_SAMPLE_RATE = 48000
-
-AUDIO_EXTENSIONS = (".wav", ".aif", ".aiff", ".flac")
 
 
 def render_score(score_path: Path, output_path: Path, *,
@@ -39,11 +38,11 @@ def render_score(score_path: Path, output_path: Path, *,
     sample_rate = int(data.get("sample_rate", DEFAULT_SAMPLE_RATE))
     seed = _resolve_seed(data)
 
-    active_layers = _filter_solo_mute(data["layers"])
+    layers = active_layers(data["layers"])
 
     # Ogni layer ha un onset sulla timeline globale (D15).
     placed = []
-    for layer in active_layers:
+    for layer in layers:
         onset_frames = round(float(layer.get("onset", 0.0)) * sample_rate)
         placed.append((onset_frames, _render_layer(layer, sample_rate, seed)))
 
@@ -58,18 +57,6 @@ def render_score(score_path: Path, output_path: Path, *,
     fmt, subtype = _resolve_format(output_path, output_format, bit_depth)
     sf.write(str(output_path), mix.astype(np.float32), sample_rate,
              format=fmt, subtype=subtype)
-
-
-def _filter_solo_mute(layers: list) -> list:
-    """Convenzione PGE: se esistono layer in solo, suonano solo quelli;
-    altrimenti suonano tutti tranne i mutati."""
-    def flag(layer, name):
-        return name in layer and layer[name] is not False
-
-    soloed = [l for l in layers if flag(l, "solo")]
-    if soloed:
-        return soloed
-    return [l for l in layers if not flag(l, "mute")]
 
 
 def _apply_master(mix: np.ndarray, master_volume,
@@ -146,7 +133,7 @@ def _render_layer(layer: dict, sample_rate: int, seed) -> np.ndarray:
     plan = build_layer_plan(layer, seed)
     params, fragments = plan.params, plan.fragments
 
-    pool_files = _scan_pool(Path(layer["pool"]))
+    pool_files = scan_pool(Path(layer["pool"]))
     # Precarica il pool una volta sola (mono, al SR di progetto, D13).
     sources = [load_mono(p, sample_rate) for p in pool_files]
     selection = build_selection_strategy(
@@ -181,14 +168,3 @@ def _render_layer(layer: dict, sample_rate: int, seed) -> np.ndarray:
         buffer[start:end] += stereo[: end - start]
 
     return buffer
-
-
-def _scan_pool(pool_dir: Path) -> list[Path]:
-    """File audio del pool, in ordine alfabetico stabile."""
-    files = sorted(
-        p for p in pool_dir.iterdir()
-        if p.suffix.lower() in AUDIO_EXTENSIONS
-    )
-    if not files:
-        raise FileNotFoundError(f"Nessun file audio nel pool: {pool_dir}")
-    return files
