@@ -347,6 +347,7 @@ function renderLayers() {
       renderLayers();
     };
     const flags = document.createElement("span");
+    flags.className = "flags";
     for (const flag of ["solo", "mute"]) {
       if (!layer.params[flag]) layer.params[flag] = { enabled: false, value: true };
       const lab = document.createElement("label");
