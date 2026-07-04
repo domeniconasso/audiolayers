@@ -6,6 +6,25 @@ segue il versionamento semantico.
 
 ## [Unreleased]
 
+### Changed
+
+- Deepening architetturale (fonte unica dei parametri): nuovo catalogo
+  `src/parameters/catalog.py` esposto come `/api/params` — la GUI genera
+  i controlli dal motore, le tabelle JavaScript duplicate sono sparite
+  (bounds/enum/default non possono più divergere).
+- Seam `pool` esplicito (`src/audio/pool.py`): scansione, estensioni e
+  idoneità in un modulo solo; convenzione solo/mute pubblica in
+  `core.layer_plan.active_layers`. Il provisioning non importa più
+  privati del renderer; via `LocalPoolSource` (seam finto mai usato).
+- `fragment.duration` assemblata in un punto solo (DurationStrategy):
+  eliminata la copia morta nello schema dichiarativo.
+
+### Fixed
+
+- I bounds dichiarati ora sono applicati davvero: `master_volume`
+  validato al parse (prima si poteva scrivere 999 senza errori),
+  `fragment.attack`/`release` entrano nel registry con bounds 0–0.5 s.
+
 ### Added
 
 - GUI web minimale (`make gui` / `python -m src.web`, Flask + vanilla JS):
