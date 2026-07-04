@@ -22,6 +22,42 @@ class PoolRequirements:
     max_file_duration: float
 
 
+def apply_policy(req: PoolRequirements, provision: dict) -> PoolRequirements:
+    """Applica al fabbisogno grezzo le politiche del blocco provision
+    (issue #8): modalità di selezione file e margini automatici.
+
+    - `mode: per-fragment` (default): 1 file per frammento;
+    - `mode: fixed` + `files: N`: pool di N file che ciclano;
+    - `mode: threshold`: `variety` (0..1, frazione del fabbisogno) e/o
+      `files` (minimo esplicito) — vince il maggiore;
+    - `min_margin`: moltiplicatore sulla durata minima richiesta;
+    - `max_factor`: max = min × factor, mai sotto il tetto base.
+    """
+    import math
+
+    from src.shared.exceptions import InvalidFieldValueError
+
+    mode = provision.get("mode", "per-fragment")
+    files_needed = req.files_needed
+    if mode == "fixed":
+        files_needed = max(1, int(provision.get("files", 1)))
+    elif mode == "threshold":
+        by_variety = math.ceil(
+            req.files_needed * float(provision.get("variety", 1.0)))
+        files_needed = max(int(provision.get("files", 0)), by_variety, 1)
+    elif mode != "per-fragment":
+        raise InvalidFieldValueError(
+            f"provision.mode '{mode}' sconosciuta "
+            f"(disponibili: fixed, per-fragment, threshold)")
+
+    min_d = req.min_file_duration * float(provision.get("min_margin", 1.0))
+    max_d = max(req.max_file_duration,
+                min_d * float(provision.get("max_factor", 1.0)))
+    return PoolRequirements(files_needed=files_needed,
+                            min_file_duration=min_d,
+                            max_file_duration=max_d)
+
+
 def analyze_layer(layer: dict, seed) -> PoolRequirements:
     """Requisiti di pool per un layer: 1 file per frammento (D-P2),
     ogni file lungo almeno quanto il frammento più lungo (D-P3)."""
