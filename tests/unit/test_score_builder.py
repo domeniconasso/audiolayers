@@ -95,6 +95,23 @@ class TestModalita:
         assert params["fragment.rhythm.pattern"]["value"] == [0.25, 0.125]
 
 
+class TestDiggerGlobaleNelBuilder:
+    def test_provision_globale_annidato_e_round_trip(self):
+        stato = stato_minimo()
+        stato["global"].update({
+            "provision.mode": {"enabled": True, "value": "fixed"},
+            "provision.count": {"enabled": True, "value": 15},
+            "provision.search.license": {"enabled": True, "value": "cc"},
+        })
+        score = build_score(stato)
+        assert score["provision"]["mode"] == "fixed"
+        assert score["provision"]["count"] == 15
+        assert score["provision"]["search"]["license"] == "cc"
+        back = parse_score(score)
+        assert back["global"]["provision.mode"]["value"] == "fixed"
+        assert back["global"]["seed"]["value"] == 42
+
+
 class TestParseScore:
     def test_round_trip_partitura_torna_nei_controlli(self):
         score = build_score(stato_minimo())

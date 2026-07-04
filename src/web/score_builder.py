@@ -12,7 +12,7 @@ def build_score(state: dict) -> dict:
     score: dict = {}
     for name, control in state.get("global", {}).items():
         if control.get("enabled"):
-            score[name] = control["value"]
+            _set_nested(score, name, control["value"])  # anche provision.*
     score["layers"] = []
     for layer_state in state.get("layers", []):
         layer = {
@@ -30,7 +30,12 @@ def parse_score(score: dict) -> dict:
     """Inverso: da una partitura (import YAML) allo stato dei controlli."""
     state = {"global": {}, "layers": []}
     for name, value in score.items():
-        if name != "layers":
+        if name == "layers":
+            continue
+        if isinstance(value, dict):   # blocchi annidati (provision globale)
+            for path, leaf in _walk(value, f"{name}."):
+                state["global"][path] = {"enabled": True, "value": leaf}
+        else:
             state["global"][name] = {"enabled": True, "value": value}
     for layer in score.get("layers", []):
         layer_state = {

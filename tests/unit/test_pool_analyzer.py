@@ -7,7 +7,47 @@ quanti file servono e quanto devono durare.
 
 import pytest
 
-from src.provisioning.analyzer import analyze_layer
+from src.provisioning.analyzer import (PoolRequirements, analyze_layer,
+                                       apply_policy)
+from src.shared.exceptions import InvalidFieldValueError
+
+
+class TestApplyPolicy:
+    """Issue #8: modalità di selezione file e politiche automatiche."""
+
+    REQ = PoolRequirements(files_needed=120, min_file_duration=1.0,
+                           max_file_duration=10.0)
+
+    def test_per_fragment_default_invariato(self):
+        assert apply_policy(self.REQ, {}) == self.REQ
+
+    def test_fixed_pool_di_n_file_che_ciclano(self):
+        out = apply_policy(self.REQ, {"mode": "fixed", "count": 20})
+        assert out.files_needed == 20
+
+    def test_threshold_variety_come_frazione(self):
+        out = apply_policy(self.REQ, {"mode": "threshold", "variety": 0.5})
+        assert out.files_needed == 60
+
+    def test_threshold_files_minimo_esplicito_vince(self):
+        out = apply_policy(self.REQ, {"mode": "threshold",
+                                      "variety": 0.1, "count": 30})
+        assert out.files_needed == 30
+
+    def test_margine_sul_minimo_e_max_derivato(self):
+        out = apply_policy(self.REQ, {"min_margin": 1.5, "max_factor": 20})
+        assert out.min_file_duration == pytest.approx(1.5)
+        assert out.max_file_duration == pytest.approx(30.0)
+
+    def test_max_derivato_mai_sotto_il_tetto_base(self):
+        """Grani corti: il max non scende sotto i 10 s storici."""
+        req = PoolRequirements(10, 0.05, 10.0)
+        out = apply_policy(req, {"max_factor": 20})
+        assert out.max_file_duration == pytest.approx(10.0)
+
+    def test_mode_sconosciuta_errore(self):
+        with pytest.raises(InvalidFieldValueError, match="mode"):
+            apply_policy(self.REQ, {"mode": "boh"})
 
 
 class TestAnalyzeLayer:

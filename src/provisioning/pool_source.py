@@ -12,7 +12,8 @@ from archivedigger.api import dig
 from archivedigger.config import Config
 
 from src.audio.pool import count_suitable_files
-from src.provisioning.analyzer import analyze_layer
+from src.provisioning.analyzer import (PoolRequirements,
+                                       analyze_layer, apply_policy)
 
 #: Default di ricerca quando la partitura non dice nulla (D-P4).
 #: Solo formati che il loader sa leggere: niente mp3.
@@ -23,6 +24,17 @@ _DEFAULT_PROVISION = {
 
 #: Giri di ricerca al massimo: a ogni giro max_items raddoppia (D-P5).
 _MAX_ROUNDS = 3
+
+#: Chiavi di POLITICA del blocco provision (issue #8): le consuma
+#: apply_policy, non devono arrivare alla Config archivedigger.
+_POLICY_KEYS = ("mode", "count", "variety", "min_margin", "max_factor")
+
+
+def _split_policy(provision: dict | None) -> tuple[dict, dict]:
+    """Separa (policy, config-di-ricerca) dal blocco provision."""
+    rest = dict(provision or {})
+    policy = {k: rest.pop(k) for k in list(rest) if k in _POLICY_KEYS}
+    return policy, rest
 
 
 class ArchiveDiggerSource:
@@ -37,8 +49,12 @@ class ArchiveDiggerSource:
         self._client = client
 
     def ensure(self, layer: dict, seed) -> None:
-        requirements = analyze_layer(layer, seed)
-        pool = Path(layer["pool"])
+        policy, search_cfg = _split_policy(layer.get("provision"))
+        requirements = apply_policy(analyze_layer(layer, seed), policy)
+        self.ensure_pool(Path(layer["pool"]), requirements, search_cfg)
+
+    def ensure_pool(self, pool: Path, requirements: PoolRequirements,
+                    search_cfg: dict) -> None:
         pool.mkdir(parents=True, exist_ok=True)
 
         shortfall = self._shortfall(pool, requirements)
@@ -47,7 +63,7 @@ class ArchiveDiggerSource:
 
         for round_index in range(_MAX_ROUNDS):
             before = shortfall
-            config = self._build_config(layer, requirements, pool,
+            config = self._build_config(search_cfg, requirements, pool,
                                         max_items=shortfall * (2 ** round_index))
             dig(config, client=self._client)
             shortfall = self._shortfall(pool, requirements)
@@ -66,11 +82,10 @@ class ArchiveDiggerSource:
             pool, min_duration=requirements.min_file_duration)
         return requirements.files_needed - suitable
 
-    def _build_config(self, layer: dict, requirements, pool: Path,
+    def _build_config(self, search_cfg: dict, requirements, pool: Path,
                       *, max_items: int) -> Config:
-        """Config archivedigger: default ← blocco `provision` del layer,
-        con filtri e conteggi calcolati dall'analyzer (non dichiarabili)."""
-        provision = layer.get("provision") or {}
+        """Config archivedigger: default ← blocco `provision`, con filtri
+        e conteggi calcolati da analyzer+policy (non dichiarabili)."""
         computed = {
             "search": {"max_items": max_items},
             "filters": {
@@ -82,7 +97,7 @@ class ArchiveDiggerSource:
         }
         job: dict = {}
         _merge(job, _DEFAULT_PROVISION)
-        _merge(job, provision)
+        _merge(job, search_cfg)
         _merge(job, computed)
         return Config.build(job=job)
 
@@ -101,8 +116,35 @@ def provision_score(score_path, client=None) -> None:
     data = yaml.safe_load(Path(score_path).read_text(encoding="utf-8"))
     seed = data.get("seed") if data.get("seed") is not None else 0
     source = ArchiveDiggerSource(client=client)
-    for layer in active_layers(data["layers"]):
-        source.ensure(layer, seed)
+    layers = active_layers(data["layers"])
+
+    global_provision = data.get("provision")
+    if not global_provision:
+        for layer in layers:
+            source.ensure(layer, seed)
+        return
+
+    # Digger GLOBALE (issue #8): un solo blocco provision a livello di
+    # partitura, i blocchi per-layer vengono ignorati. I fabbisogni dei
+    # layer che condividono lo stesso pool si sommano, le durate minime
+    # si allineano al piu' esigente; la policy si applica all'aggregato.
+    policy, search_cfg = _split_policy(global_provision)
+    groups: dict[str, PoolRequirements] = {}
+    for layer in layers:
+        req = analyze_layer(layer, seed)
+        key = str(Path(layer["pool"]))
+        if key in groups:
+            g = groups[key]
+            groups[key] = PoolRequirements(
+                files_needed=g.files_needed + req.files_needed,
+                min_file_duration=max(g.min_file_duration,
+                                      req.min_file_duration),
+                max_file_duration=max(g.max_file_duration,
+                                      req.max_file_duration))
+        else:
+            groups[key] = req
+    for pool, req in groups.items():
+        source.ensure_pool(Path(pool), apply_policy(req, policy), search_cfg)
 
 
 def _merge(base: dict, overlay: dict) -> None:

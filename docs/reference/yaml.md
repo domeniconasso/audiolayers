@@ -140,6 +140,11 @@ indipendenti.
 
 ```yaml
 provision:
+  mode: per-fragment       # | threshold | fixed (quanti file garantire)
+  count: 20                # fixed: esatti; threshold: minimo
+  variety: 0.5             # threshold: frazione del fabbisogno (0..1)
+  min_margin: 1.5          # margine sulla durata minima richiesta
+  max_factor: 20           # durata max file = min x fattore (mai < 10 s)
   search:                  # qualunque campo di ricerca archivedigger
     collection: [field-recordings]
     license: cc            # default se omesso
@@ -147,6 +152,11 @@ provision:
     prefer:
       - [Flac, WAVE, AIFF] # default se omesso (il loader non legge mp3)
 ```
+
+Il blocco può vivere anche **a livello di partitura** (digger globale):
+in quel caso i blocchi dei layer vengono ignorati, i fabbisogni dei
+layer che condividono un pool si sommano e la policy si applica
+all'aggregato.
 
 Senza `--dig` il blocco è ignorato e il pool resta una normale cartella
 locale. Con `--dig` orienta la ricerca su Internet Archive; i campi

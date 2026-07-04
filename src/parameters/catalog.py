@@ -172,6 +172,31 @@ def catalog() -> dict:
                        "±gradi."),
         ],
         "provision": [
+            _free("provision.mode", "modalità file", "per-fragment",
+                  kind="select",
+                  options=["per-fragment", "threshold", "fixed"],
+                  info="Quanti file garantire nel pool: per-fragment = 1 "
+                       "per grano (nessun riuso); threshold = frazione del "
+                       "fabbisogno (variety) e/o minimo esplicito (count); "
+                       "fixed = esattamente N file che ciclano."),
+            _free("provision.count", "n. file", 20, kind="int",
+                  info="Numero di file: esatto in modalità fixed, minimo "
+                       "in modalità threshold."),
+            _free("provision.variety", "variety", 1.0, minimo=0.0,
+                  massimo=1.0, step=0.05, ui=(0, 1),
+                  info="Solo threshold: frazione del fabbisogno per-grano "
+                       "da garantire (1 = nessun riuso, 0.5 = metà dei "
+                       "file, più riuso)."),
+            _free("provision.min_margin", "margine durata", 1.0,
+                  minimo=0.5, massimo=5.0, step=0.1, ui=(1, 3),
+                  info="Moltiplicatore sulla durata minima richiesta ai "
+                       "file (margine di sicurezza per pointer e "
+                       "ricampionamento)."),
+            _free("provision.max_factor", "fattore max", 1.0,
+                  minimo=1.0, massimo=100.0, step=1, ui=(1, 50),
+                  info="Durata massima dei file scaricati = minimo × "
+                       "fattore (mai sotto il tetto base di 10 s): file "
+                       "piccoli = download veloce."),
             _free("provision.search.license", "licenza", "cc",
                   kind="select",
                   options=["cc", "publicdomain", "cc-commercial", "any"],
