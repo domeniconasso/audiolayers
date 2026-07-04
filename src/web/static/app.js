@@ -293,6 +293,12 @@ function paramRow(def, control, getDur) {
 }
 
 
+
+function setColumnFlow(grid) {
+  const n = grid.children.length;
+  grid.style.gridTemplateRows = `repeat(${Math.max(1, Math.ceil(n / 3))}, auto)`;
+}
+
 /* ---------- pannelli ---------- */
 function renderGlobals() {
   const box = document.getElementById("global-params");
@@ -301,6 +307,7 @@ function renderGlobals() {
     if (!state.global[def.path]) state.global[def.path] = newControl(def);
     box.append(paramRow(def, state.global[def.path], () => 60));
   }
+  setColumnFlow(box);
 }
 
 function renderLayers() {
@@ -367,6 +374,7 @@ function renderLayers() {
       if (def.mode && def.mode !== grainMode) continue;
       grid.append(paramRow(def, layer.params[def.path], getDur));
     }
+    setColumnFlow(grid);
     panel.append(grid);
     // Sezione digger: esiste solo se il toggle "download (dig)" è attivo.
     if (document.getElementById("chk-dig").checked) {
