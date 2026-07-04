@@ -36,6 +36,7 @@ def render_score(score_path: Path, output_path: Path, *,
     """
     data = yaml.safe_load(Path(score_path).read_text(encoding="utf-8"))
     sample_rate = int(data.get("sample_rate", DEFAULT_SAMPLE_RATE))
+    master = _build_master(data.get("master_volume", 0.0))  # valida SUBITO
     seed = _resolve_seed(data)
 
     layers = active_layers(data["layers"])
@@ -51,7 +52,7 @@ def render_score(score_path: Path, output_path: Path, *,
     for offset, buf in placed:
         mix[offset:offset + len(buf)] += buf
 
-    mix = _apply_master(mix, data.get("master_volume", 0.0), sample_rate)
+    mix = _apply_master(mix, master, sample_rate)
     mix = _report_peak_and_normalize(mix, normalize)
 
     fmt, subtype = _resolve_format(output_path, output_format, bit_depth)
@@ -59,13 +60,23 @@ def render_score(score_path: Path, output_path: Path, *,
              format=fmt, subtype=subtype)
 
 
-def _apply_master(mix: np.ndarray, master_volume,
-                  sample_rate: int) -> np.ndarray:
-    """master_volume in dB, scalare o envelope (curva per-campione)."""
-    from src.envelopes.envelope import Envelope
+def _build_master(master_volume):
+    """Costruisce e VALIDA il master contro i bounds del registry:
+    la partitura fuori range non parte proprio (niente sorprese a fine
+    render)."""
     from src.envelopes.envelope_builder import build_envelope
+    from src.parameters.parser import validate_parameter
 
     master = build_envelope(master_volume)
+    validate_parameter(master, "master_volume")
+    return master
+
+
+def _apply_master(mix: np.ndarray, master,
+                  sample_rate: int) -> np.ndarray:
+    """master in dB (float o Envelope), curva per-campione."""
+    from src.envelopes.envelope import Envelope
+
     if isinstance(master, Envelope):
         times = np.arange(len(mix)) / sample_rate
         gain = 10.0 ** (master.evaluate_array(times) / 20.0)

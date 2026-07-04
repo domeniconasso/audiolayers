@@ -77,9 +77,14 @@ def build_fragment_envelope(fragment_block: dict) -> FragmentEnvelopeStrategy:
             f"inviluppo '{name}' sconosciuto "
             f"(disponibili: {', '.join(sorted(_STRATEGIES))})"
         )
+    # Bounds dal registry, come ogni altro numerico: la "sicurezza"
+    # dichiarata deve essere applicata davvero (deepening D1b).
+    from src.parameters.parser import validate_parameter
+
+    attack = float(fragment_block.get("attack", DEFAULT_ATTACK))
+    release = float(fragment_block.get("release", DEFAULT_RELEASE))
+    validate_parameter(attack, "fragment_attack")
+    validate_parameter(release, "fragment_release")
     if name == "raised_cosine":
-        return RaisedCosineEnvelope(
-            attack=float(fragment_block.get("attack", DEFAULT_ATTACK)),
-            release=float(fragment_block.get("release", DEFAULT_RELEASE)),
-        )
+        return RaisedCosineEnvelope(attack=attack, release=release)
     return RectangleEnvelope()

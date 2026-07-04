@@ -126,14 +126,14 @@ def catalog() -> dict:
                   info="Forma d'ampiezza del grano: raised_cosine = campana "
                        "morbida anti-click; rectangle = nessuna sagomatura "
                        "(bordi netti)."),
-            _free("fragment.attack", "attack (s)", DEFAULT_ATTACK,
-                  minimo=0.0, massimo=0.5, step=0.001, ui=(0, 0.1),
-                  info="Fade-in del grano in secondi (anti-click). Scalare "
-                       "nel motore."),
-            _free("fragment.release", "release (s)", DEFAULT_RELEASE,
-                  minimo=0.0, massimo=0.5, step=0.001, ui=(0, 0.1),
-                  info="Fade-out del grano in secondi (anti-click). Scalare "
-                       "nel motore."),
+            _num("fragment.attack", "attack (s)", "fragment_attack",
+                 DEFAULT_ATTACK, env=False, step=0.001, ui=(0, 0.1),
+                 info="Fade-in del grano in secondi (anti-click). Scalare "
+                      "nel motore."),
+            _num("fragment.release", "release (s)", "fragment_release",
+                 DEFAULT_RELEASE, env=False, step=0.001, ui=(0, 0.1),
+                 info="Fade-out del grano in secondi (anti-click). Scalare "
+                      "nel motore."),
             _num("pointer.start", "pointer", "pointer_start", 0.0,
                  info="Punto di lettura nel file sorgente: 0 = inizio, "
                       "0.5 = metà, 1 = fine. Come curva attraversa il file "
