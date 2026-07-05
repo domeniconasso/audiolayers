@@ -71,11 +71,8 @@ Via Makefile: `make render SCORE=brano.yaml`.
 
 ## GUI web
 
-```
-make gui            # oppure: python -m audiolayers.web [--port 8000]
-```
-
-Apre su `http://localhost:8000`: controlli on/off per ogni parametro
-(spento = default del motore), editor breakpoint per gli envelope,
-toggle `download (dig)`, render asincrono con player e download del wav,
-export/import YAML compatibile con la CLI.
+La GUI web vive in un repository dedicato:
+[MU-prj/audiolayers_gui](https://github.com/MU-prj/audiolayers_gui).
+Consuma il motore come pacchetto installato (`pip install
+git+https://github.com/MU-prj/audiolayers@main`) e si genera dal
+catalogo dei parametri (`audiolayers.parameters.catalog`).
