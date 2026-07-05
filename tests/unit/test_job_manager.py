@@ -6,7 +6,7 @@ sa se sotto c'è un render puro o dig+render.
 
 import time
 
-from src.web.jobs import JobManager
+from audiolayers.web.jobs import JobManager
 
 
 def wait_done(manager, job_id, timeout=5.0):

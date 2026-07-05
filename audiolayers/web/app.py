@@ -2,7 +2,7 @@
 
 Factory `create_app` con dipendenze iniettabili (client Internet Archive
 per --dig, cartella output): i test girano offline, la CLI `python -m
-src.web` usa i default veri. Il render gira come job in background
+audiolayers.web` usa i default veri. Il render gira come job in background
 (JobManager) e la GUI fa polling.
 """
 
@@ -16,8 +16,8 @@ from pathlib import Path
 import yaml
 from flask import Flask, jsonify, request, send_file
 
-from src.web.jobs import JobManager
-from src.web.score_builder import build_score, parse_score
+from audiolayers.web.jobs import JobManager
+from audiolayers.web.score_builder import build_score, parse_score
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -94,11 +94,11 @@ def create_app(*, output_dir: Path | None = None,
                 log.add(f"partitura scritta: {len(score['layers'])} layer")
                 if dig:
                     log.add("dig: analisi partitura e download da Internet Archive...")
-                    from src.provisioning.pool_source import provision_score
+                    from audiolayers.provisioning.pool_source import provision_score
                     provision_score(score_path, client=archive_client)
                     log.add("dig: completato")
                 log.add("render: avviato")
-                from src.engine.render import render_score
+                from audiolayers.engine.render import render_score
                 wav_path = out / "render.wav"
                 render_score(score_path, wav_path)
                 log.add(f"render: completato -> {wav_path.name}")
@@ -115,7 +115,7 @@ def create_app(*, output_dir: Path | None = None,
     @app.get("/api/params")
     def params():
         """Catalogo dei parametri: la GUI si genera da qui (fonte unica)."""
-        from src.parameters.catalog import catalog
+        from audiolayers.parameters.catalog import catalog
         return jsonify(catalog())
 
     @app.get("/api/jobs/<job_id>")

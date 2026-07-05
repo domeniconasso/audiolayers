@@ -35,10 +35,10 @@ install: ## Installa/aggiorna dipendenze nel venv
 	$(PYTHON) -m pip install -r requirements.txt
 
 render: ## Renderizza una partitura: make render SCORE=path/to/score.yaml
-	$(PYTHON) -m src.main $(SCORE)
+	$(PYTHON) -m audiolayers.main $(SCORE)
 
 setup: ## Configura direnv + tab-completion zsh (da WSL/zsh)
 	@zsh setup.sh
 
 gui: ## Avvia la GUI web su http://localhost:8000
-	$(PYTHON) -m src.web
+	$(PYTHON) -m audiolayers.web

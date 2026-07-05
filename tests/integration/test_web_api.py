@@ -8,7 +8,7 @@ import time
 
 import yaml
 
-from src.web.app import create_app
+from audiolayers.web.app import create_app
 from tests.unit.test_pool_source import FakeArchiveClient, write_wav
 
 

@@ -1,8 +1,8 @@
-"""Avvio GUI: python -m src.web [--port 8000]."""
+"""Avvio GUI: python -m audiolayers.web [--port 8000]."""
 
 import argparse
 
-from src.web.app import create_app
+from audiolayers.web.app import create_app
 
 parser = argparse.ArgumentParser(prog="audiolayers-gui")
 parser.add_argument("--port", type=int, default=8000)

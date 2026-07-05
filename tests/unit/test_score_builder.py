@@ -5,7 +5,7 @@ nello YAML e il motore usa i suoi default. I percorsi sono in dot
 notation (fragment.duration, pointer.start, selection.strategy).
 """
 
-from src.web.score_builder import build_score, parse_score
+from audiolayers.web.score_builder import build_score, parse_score
 
 
 def stato_minimo():

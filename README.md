@@ -36,7 +36,7 @@ layers:
 ```
 
 ```bash
-python -m src.main brano.yaml -o brano.wav
+python -m audiolayers.main brano.yaml -o brano.wav
 ```
 
 **Manuale completo**: [docs/manuale.md](docs/manuale.md) — con la guida
