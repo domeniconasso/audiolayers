@@ -12,7 +12,7 @@ endif
 # Partitura da renderizzare: make render SCORE=path/to/score.yaml
 SCORE ?=
 
-.PHONY: tests test unit integration golden e2e install render setup gui
+.PHONY: tests test unit integration golden e2e install render setup
 
 tests: ## Suite completa
 	$(PYTHON) -m pytest
@@ -39,6 +39,3 @@ render: ## Renderizza una partitura: make render SCORE=path/to/score.yaml
 
 setup: ## Configura direnv + tab-completion zsh (da WSL/zsh)
 	@zsh setup.sh
-
-gui: ## Avvia la GUI web su http://localhost:8000
-	$(PYTHON) -m audiolayers.web
