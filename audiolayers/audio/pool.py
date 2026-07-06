@@ -13,6 +13,27 @@ import soundfile as sf
 AUDIO_EXTENSIONS = (".wav", ".aif", ".aiff", ".flac")
 
 
+#: Base dei pool derivati quando la partitura non dichiara nulla.
+DEFAULT_POOL_BASE = "audio/pool"
+
+#: Sentinella sul layer: "non condividere la base globale, dammi la mia
+#: sottocartella <base>/<layer_id>" (issue #13).
+POOL_AUTO = "auto"
+
+
+def resolve_pool(layer: dict, score: dict | None = None) -> Path:
+    """La cartella pool effettiva del layer (issue #13)."""
+    pool = layer.get("pool")
+    base = ((score or {}).get("provision") or {}).get("pool")
+    if pool == POOL_AUTO:
+        return Path(base or DEFAULT_POOL_BASE) / layer.get("layer_id", "layer")
+    if pool:
+        return Path(pool)
+    if base:
+        return Path(base)
+    return Path(DEFAULT_POOL_BASE) / layer.get("layer_id", "layer")
+
+
 def scan_pool(pool_dir: Path) -> list[Path]:
     """File audio del pool, in ordine alfabetico stabile.
 
