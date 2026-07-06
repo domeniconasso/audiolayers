@@ -22,7 +22,15 @@ POOL_AUTO = "auto"
 
 
 def resolve_pool(layer: dict, score: dict | None = None) -> Path:
-    """La cartella pool effettiva del layer (issue #13)."""
+    """La cartella pool effettiva del layer (issue #13).
+
+    | provision.pool globale | pool del layer | risultato               |
+    |------------------------|----------------|-------------------------|
+    | sì                     | assente        | <base> (condivisa)      |
+    | sì                     | auto           | <base>/<layer_id>       |
+    | no                     | assente o auto | audio/pool/<layer_id>   |
+    | indifferente           | <path>         | <path>                  |
+    """
     pool = layer.get("pool")
     base = ((score or {}).get("provision") or {}).get("pool")
     if pool == POOL_AUTO:
