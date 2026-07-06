@@ -8,6 +8,10 @@ segue il versionamento semantico.
 
 ### Changed
 
+- La dipendenza `archivedigger` è pinnata al tag rilasciato `v0.1.0`
+  invece del branch mobile `@main`: build riproducibili, gli aggiornamenti
+  diventano un bump esplicito del tag.
+
 - Il package `src` si chiama ora `audiolayers` e il motore è un pacchetto
   Python installabile (`pyproject.toml`, entry point console
   `audiolayers`): `pip install git+https://github.com/MU-prj/audiolayers@main`.

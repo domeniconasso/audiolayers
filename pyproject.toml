@@ -15,7 +15,7 @@ dependencies = [
     "soxr>=0.5",
     "PyYAML>=6.0",
     "scipy>=1.11",
-    "archivedigger @ git+https://github.com/MU-prj/archivedigger@main",
+    "archivedigger @ git+https://github.com/MU-prj/archivedigger@v0.1.0",
 ]
 
 [project.scripts]
